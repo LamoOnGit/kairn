@@ -428,9 +428,11 @@ h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spaci
 .mrow .mt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mrow .check{width:18px;height:18px}
 .more-link{font-size:12px;padding:2px 6px}
-.tcount{margin-left:4px;font:600 11px var(--font-mono);color:var(--muted)}
-.tcount.late{color:var(--danger)}
-.cell.today .tcount{color:var(--accent-ink)}
+.tcount{display:inline-flex;align-items:baseline;gap:3px;font:700 12px/1 var(--font-body);color:var(--accent);background:var(--accent-soft);padding:3px 7px;border-radius:999px;white-space:nowrap}
+.tcount small{font-size:10px;font-weight:600}
+.dhead2 .sp{flex:1}
+.tcount.late{color:var(--danger);background:var(--danger-soft)}
+
 .cell .dn{display:inline-flex;align-items:center}
 .chip.ev.dl{background:var(--danger-soft);color:var(--danger);border-left:3px solid var(--danger)}
 .legend .lg{display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:5px;vertical-align:0;background:var(--accent)}
@@ -463,7 +465,7 @@ h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spaci
 @keyframes calInR{from{opacity:.2;transform:translateX(28px)}to{opacity:1;transform:none}}
 @keyframes calInL{from{opacity:.2;transform:translateX(-28px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.cal-slide>.cal{animation:none!important}}
-.dhead2{display:flex;align-items:center;gap:4px;justify-content:space-between;min-width:0}
+.dhead2{display:flex;align-items:center;gap:4px;min-width:0;flex-wrap:wrap}
 .mails{display:inline-flex;gap:2px;flex-wrap:wrap;justify-content:flex-end}
 .mailb{all:unset;box-sizing:border-box;display:inline-grid;place-items:center;width:16px;height:16px;border-radius:4px;font:700 10px/1 var(--font-mono);color:#fff;background:var(--pc,var(--accent));cursor:pointer;flex:none}
 .mailb.k-R{background:var(--surface);color:var(--pc,var(--accent));box-shadow:inset 0 0 0 1.5px var(--pc,var(--accent))}
@@ -937,7 +939,7 @@ function calGrid(compact,pf){
       const nt=dt.filter(t=>t.status!=='done');
       const lateDay=nt.length&&ds<T;
       const chipsC=key.slice(0,2).map(x=>{const e=x.e,first=x.start===ds||i%7===0;return `<button class="chip ev ${x.ext?'ext':isOp(e)?'op':'dl'}" style="--pc:${esc(e.type==='deadline'?'var(--danger)':evColor(e))}" data-act="open-event" data-id="${e.id}" title="${esc(segTitle(x))}">${first?esc(segTitle(x)):'&nbsp;'}</button>`;}).join('')+(key.length>2?`<span class="more">+${key.length-2}</span>`:'');
-      h+=`<div class="cell ${out?'out':''} ${i%7>=5?'wknd':''} ${ds===T?'today':''}" data-act="day" data-date="${ds}"><span class="dhead2"><span class="dn">${d.getDate()}${nt.length?`<span class="tcount ${lateDay?'late':''}">• ${nt.length}</span>`:''}</span>${mb}</span>${chipsC}</div>`;
+      h+=`<div class="cell ${out?'out':''} ${i%7>=5?'wknd':''} ${ds===T?'today':''}" data-act="day" data-date="${ds}"><span class="dhead2"><span class="dn">${d.getDate()}</span>${nt.length?`<span class="tcount ${lateDay?'late':''}" title="${nt.length} tâche${nt.length>1?'s':''} à rendre${lateDay?' (en retard)':''}">${nt.length}<small> tâche${nt.length>1?'s':''}</small></span>`:''}<span class="sp"></span>${mb}</span>${chipsC}</div>`;
       continue;
     }
     const items=[
@@ -975,7 +977,7 @@ function viewDashboard(){
   </div>
   <div class="d-top">
     <section class="panel">${calSwitchHTML()}<div class="cal-head">${calNav('h3')}<span class="spacer"></span><button class="link" data-act="dcal-detail">Voir le détail</button></div><div class="cal-slide ${ui._dir}" id="dcal-slide">${calGrid(true,ui.dcal)}</div>
-      <div class="legend"><span><i class="lg op"></i>OP</span><span><i class="lg ext"></i>Prolongation</span><span><i class="lg dl"></i>Rendu</span><span><b class="mailb static">L</b> mail · <b class="mailb static k-R">R</b> relance</span><span>• tâches à rendre</span></div></section>
+      <div class="legend"><span><i class="lg op"></i>OP</span><span><i class="lg ext"></i>Prolongation</span><span><i class="lg dl"></i>Rendu</span><span><b class="mailb static">L</b> mail · <b class="mailb static k-R">R</b> relance</span><span><span class="tcount" style="padding:1px 6px">2<small> tâches</small></span> à rendre</span></div></section>
     <section class="panel"><h2>Cette semaine<span class="r"><a class="link" href="#taches">Toutes les tâches</a></span></h2>${weekHTML()}</section>
   </div>
   ${opBannersHTML()}
