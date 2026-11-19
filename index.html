@@ -497,6 +497,9 @@ h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spaci
 .icon-btn.trash:hover{color:var(--danger);background:var(--danger-soft)}
 .kcard .k-del{margin-left:auto;opacity:0}
 .kcard:hover .k-del,.kcard .k-del:focus-visible{opacity:1}
+.waiting{font:600 11px var(--font-body);color:var(--warn);background:var(--warn-soft);padding:1px 6px;border-radius:4px;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.wait-f{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dr-fields .wait-f input{max-width:340px}
 @media (max-width:1180px){.d-top{grid-template-columns:1fr}.week{contain:none;max-height:560px;flex:none}}
 @media (max-width:820px){
   .app{grid-template-columns:1fr;grid-template-rows:auto 1fr}
@@ -858,7 +861,7 @@ function dueBadge(t){
 }
 function checkBtn(t){const on=t.status==='done';return `<button class="check ${on?'on':''}" data-act="toggle-done" data-id="${t.id}" aria-label="${on?'Rouvrir':'Terminer'} : ${esc(t.title)}">${on?CHECK_SVG:''}</button>`;}
 function clProg(t){const c=t.checklist||[];if(!c.length)return '';return `<span class="due" title="Sous-tâches">☑ ${c.filter(x=>x.done).length}/${c.length}</span>`;}
-function flags(t){return (isBlocked(t)?'<span class="blocked">Bloquée</span>':'')+(t.tags||[]).slice(0,2).map(x=>`<span class="tag">#${esc(x)}</span>`).join('');}
+function flags(t){return (isBlocked(t)?'<span class="blocked">Bloquée</span>':'')+(t.waitingFor&&t.status!=='done'?`<span class="waiting" title="En attente de : ${esc(t.waitingFor)}">⏳ ${esc(t.waitingFor)}</span>`:'')+(t.tags||[]).slice(0,2).map(x=>`<span class="tag">#${esc(x)}</span>`).join('');}
 function taskRow(t,stack){
   return `<div class="trow ${stack===true?'stack':''} ${t.status==='done'?'is-done':''}" data-act="open-task" data-id="${t.id}" tabindex="0" role="button">
     ${checkBtn(t)}<span class="ttl">${esc(t.title)}</span>
@@ -1020,7 +1023,7 @@ function dueBannersHTML(){
     return `<button class="due-banner" style="--uc:${uc}" data-act="open-task" data-id="${t.id}">
       <span class="when">${rel(t.due)}</span>
       <span class="ttl">${esc(t.title)}</span>
-      <span class="row">${projChip(t.projectId)}</span>
+      <span class="row">${projChip(t.projectId)}${t.waitingFor?`<span class="waiting">⏳ ${esc(t.waitingFor)}</span>`:''}</span>
     </button>`;}).join('')}</div>`;
 }
 function projStats(p){
@@ -1049,9 +1052,9 @@ function filtered({ignoreStatus=false}={}){
     if(f.when==='week'&&!(t.due&&t.due>=T&&t.due<=addDays(T,7)))return false;
     if(f.when==='week7late'&&!(t.due&&t.due<=addDays(T,7)))return false;
     if(f.when==='nodue'&&t.due)return false;
-    if(f.when==='blocked'&&!isBlocked(t))return false;
+    if(f.when==='blocked'&&!(isBlocked(t)||(t.waitingFor&&t.status!=='done')))return false;
     if(f.when==='op'&&!t.eventId)return false;
-    if(q){const p=S.projects[t.projectId],e=S.events[t.eventId];if(!norm([t.title,t.desc,tkey(t),p&&p.name,e&&e.title,(t.tags||[]).join(' ')].join(' ')).includes(q))return false;}
+    if(q){const p=S.projects[t.projectId],e=S.events[t.eventId];if(!norm([t.title,t.desc,tkey(t),p&&p.name,e&&e.title,t.waitingFor,(t.tags||[]).join(' ')].join(' ')).includes(q))return false;}
     return true;
   });
 }
@@ -1089,7 +1092,7 @@ function viewList(){
     ${projectFilterSelect()}
     <label class="sr" for="flt-status">Statut</label><select id="flt-status" data-filter="status">${opt('open','Ouvertes',f.status)}${opt('all','Toutes',f.status)}${STATUSES.map(s=>opt(s.k,s.l,f.status)).join('')}</select>
     <label class="sr" for="flt-prio">Priorité</label><select id="flt-prio" data-filter="priority">${opt('all','Toutes priorités',f.priority)}${opt('high','Urgentes',f.priority)}${PRIOS.map(p=>opt(p.k,p.l,f.priority)).join('')}</select>
-    <label class="sr" for="flt-when">Échéance</label><select id="flt-when" data-filter="when">${opt('all','Toutes échéances',f.when)}${opt('late','En retard',f.when)}${opt('week','7 prochains jours',f.when)}${opt('week7late','Retards + 7 jours',f.when)}${opt('nodue','Sans échéance',f.when)}${opt('blocked','Bloquées',f.when)}${opt('op','Liées à une OP',f.when)}</select>
+    <label class="sr" for="flt-when">Échéance</label><select id="flt-when" data-filter="when">${opt('all','Toutes échéances',f.when)}${opt('late','En retard',f.when)}${opt('week','7 prochains jours',f.when)}${opt('week7late','Retards + 7 jours',f.when)}${opt('nodue','Sans échéance',f.when)}${opt('blocked','Bloquées ou en attente',f.when)}${opt('op','Liées à une OP',f.when)}</select>
     <label class="sr" for="flt-group">Grouper</label><select id="flt-group" data-filter="group">${opt('none','Sans regroupement',f.group)}${opt('project','Grouper par projet',f.group)}${opt('status','Grouper par statut',f.group)}${opt('op','Grouper par OP',f.group)}</select>
     <label class="sr" for="flt-sort">Trier</label><select id="flt-sort" data-filter="sort">${opt('due','Tri : échéance',f.sort)}${opt('prio','Tri : priorité',f.sort)}${opt('recent','Tri : plus récentes',f.sort)}</select>
     ${active?`<button class="chipbtn" data-act="reset-filters">Réinitialiser</button>`:''}
@@ -1266,6 +1269,7 @@ function renderDrawer(focusTitle){
         <label for="d-event">OP liée</label><span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="d-event" data-df="eventId">${evOpts}</select>${t.projectId&&!list('events').some(e=>isOp(e)&&(e.projectId||'')===t.projectId)?`<span class="hint">Aucune OP dans ce projet</span>`:''}</span>
         <label for="d-tags">Étiquettes</label><input id="d-tags" data-df="tags" value="${esc(t.tags.join(', '))}" placeholder="ex. mailing, seo">
         <span class="k">Bloquée par</span><span class="deps">${t.blockedBy.map(id=>{const b=S.tasks[id];return b?`<span class="dep ${b.status==='done'?'ok':''}">${esc(tkey(b)+' · '+b.title)}<button data-dep-del="${id}" aria-label="Retirer la dépendance">×</button></span>`:'';}).join('')}<label class="sr" for="d-dep">Ajouter une dépendance</label><select id="d-dep" style="max-width:260px">${depOpts}</select></span>
+        <label for="d-wait">En attente de</label><span class="wait-f"><input id="d-wait" data-df="waitingFor" list="d-wait-list" maxlength="120" value="${esc(t.waitingFor||'')}" placeholder="Personne ou chose (ex. validation de la direction, visuels de l’agence)"><datalist id="d-wait-list">${[...new Set(list('tasks').map(x=>x.waitingFor).filter(Boolean))].slice(0,30).map(v=>`<option value="${esc(v)}"></option>`).join('')}</datalist>${t.waitingFor&&t.waitingSince?`<span class="due ${diff(t.waitingSince,T)>=3?'soon':''}">${diff(t.waitingSince,T)<=0?'depuis aujourd’hui':'depuis '+diff(t.waitingSince,T)+' j'}</span>`:''}</span>
         ${blocking.length?`<span class="k">Bloque</span><span class="deps">${blocking.map(b=>`<span class="dep">${esc(tkey(b)+' · '+b.title)}</span>`).join('')}</span>`:''}
       </div>
       <div class="dr-sec"><h4><label for="d-desc">Description</label></h4><textarea id="d-desc" placeholder="Contexte, liens, interlocuteurs…">${esc(t.desc||'')}</textarea></div>
@@ -1290,6 +1294,14 @@ function renderDrawer(focusTitle){
 function drawerField(el){
   const t=drawer.t,k=el.dataset.df,v=el.value;
   if(k==='status'){drawer.t=withStatus(t,v);}
+  else if(k==='waitingFor'){
+    const old=t.waitingFor||'',nv=v.trim();
+    if(nv!==old){
+      t.waitingFor=nv;t.waitingSince=nv?today():'';
+      t.comments=(t.comments||[]).concat({id:newId(),sys:true,text:nv?`En attente de : ${nv}`:`Plus en attente de : ${old}`,at:Date.now()}).slice(-120);
+      if(nv&&['todo','doing','review'].includes(t.status)){drawer.t=withStatus(t,'waiting');}
+    }
+  }
   else if(k==='tags')t.tags=v.split(',').map(s=>s.trim().replace(/^#/,'')).filter(Boolean).slice(0,10);
   else if(k==='start'){t.start=v;if(v&&t.due&&t.due<v)t.due=v;}
   else if(k==='due'){t.due=v;if(v&&t.start&&t.start>v)t.start=v;}
@@ -1799,7 +1811,7 @@ function seedDemo(){
   const c=(...a)=>a.map((x,i)=>({id:newId(),text:x.replace(/^\+/,''),done:x.startsWith('+')}));
   const com=(txt,dd)=>({id:newId(),text:txt,at:now-dd*864e5});
   mk('Dashboard acquisition hebdo (Eulerian → Excel)','data','todo','important',1,{tags:['reporting'],checklist:c('Export Eulerian','Mise à jour des onglets SEO / SEA / affiliation','Envoi à l’équipe')});
-  mk('Brief agence SEA : campagnes de la saison','data','waiting','important',3,{tags:['sea'],desc:'En attente du budget validé par la direction.',comments:[com('Relancé la direction pour la validation du budget.',1)]});
+  mk('Brief agence SEA : campagnes de la saison','data','waiting','important',3,{tags:['sea'],waitingFor:'Validation du budget par la direction',waitingSince:d(-4),comments:[com('Relancé la direction pour la validation du budget.',1)]});
   mk('Optimiser les enchères Google Ads des stations','data','doing','normal',6,{start:-3,tags:['sea']});
   const seoA=mk('Relire les textes SEO : stations des Alpes du Nord','snow','review','normal',2,{start:-2,tags:['seo'],checklist:c('+Val Thorens','+Tignes','Les Arcs','La Plagne')});
   mk('Rédiger 10 pages stations des Pyrénées','snow','doing','important',9,{start:-5,tags:['seo'],checklist:c('+Font-Romeu','+Saint-Lary','+Peyragudes','Cauterets','Luz-Ardiden','Piau-Engaly','Les Angles','Ax 3 Domaines','La Mongie','Gourette')});
@@ -1808,7 +1820,7 @@ function seedDemo(){
   mk('Intégrer les nouveaux magasins adhérents dans Splio','skiset','todo','normal',13,{tags:['mailing']});
   const brief=mk('Brief visuels hiver pour l’agence','snow','done','normal',-4);
   mk('Mettre à jour les bannières de la home','snow','todo','normal',7,{blockedBy:[brief.id,seoA.id]});
-  mk('Négocier la commission avec le partenaire affiliation','data','waiting','normal',16,{tags:['affiliation']});
+  mk('Négocier la commission avec le partenaire affiliation','data','waiting','normal',16,{tags:['affiliation'],waitingFor:'Retour du partenaire',waitingSince:d(-1)});
   mk('Tableau de bord affiliation','data','todo','low',22,{tags:['affiliation','reporting']});
   mk('Landing page Saint-Valentin','netski','todo','normal',70);
   mk('Planning des posts du Calendrier de l’Avent','netski','doing','important',5,{start:-1,tags:['social'],checklist:c('+Semaine 1','Semaine 2','Semaine 3','Semaine 4')});
@@ -1936,7 +1948,7 @@ document.addEventListener('keydown',e=>{
     if(e.key==='Escape'){e.preventDefault();top===mroot?closeModal():closeDrawer();return;}
     if(e.key==='Tab'){const f=[...top.querySelectorAll('button,input,select,textarea,[tabindex],label.btn')].filter(x=>!x.disabled&&x.offsetParent!==null&&!x.classList.contains('sr'));if(f.length){const a=f[0],b=f[f.length-1];if(e.shiftKey&&document.activeElement===a){e.preventDefault();b.focus();}else if(!e.shiftKey&&document.activeElement===b){e.preventDefault();a.focus();}}}
     if(top===droot&&e.key==='Enter'){if(e.target.id==='d-cl'){e.preventDefault();addCl();return;}if(e.target.id==='d-com'){e.preventDefault();addCom();return;}}
-    if(top===droot&&e.key==='Enter'&&e.target.dataset&&e.target.dataset.df==='tags'){e.preventDefault();e.target.blur();return;}
+    if(top===droot&&e.key==='Enter'&&e.target.dataset&&['tags','waitingFor'].includes(e.target.dataset.df)){e.preventDefault();e.target.blur();return;}
     if((e.key==='Enter'||e.key===' ')&&e.target.matches('[role=button][data-act]')){e.preventDefault();e.target.click();}
     if(e.key==='Enter'&&e.target.matches('label.btn[for]')){e.preventDefault();e.target.click();}
     return;
