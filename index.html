@@ -1247,7 +1247,7 @@ function closeDrawer(){
 function renderDrawer(focusTitle){
   const t=drawer.t,T=today();
   const active=document.activeElement&&document.activeElement.id;
-  const evOpts=opt('','Aucune OP',t.eventId||'')+list('events').filter(e=>isOp(e)&&(evEnd(e)>=addDays(T,-30)||e.id===t.eventId)).sort((a,b)=>a.start.localeCompare(b.start)).map(e=>opt(e.id,`${e.title} (${dDay(e.start)})`,t.eventId)).join('');
+  const evOpts=opt('',t.projectId?'Aucune OP':'Aucune OP',t.eventId||'')+list('events').filter(e=>isOp(e)&&(!t.projectId||(e.projectId||'')===t.projectId)&&(evEnd(e)>=addDays(T,-30)||e.id===t.eventId)).sort((a,b)=>a.start.localeCompare(b.start)).map(e=>opt(e.id,`${e.title} (${dDay(e.start)})`,t.eventId)).join('');
   const depOpts=`<option value="">+ Ajouter une tâche bloquante…</option>`+openTasks().filter(x=>x.id!==t.id&&!t.blockedBy.includes(x.id)).sort((a,b)=>(a.num||0)-(b.num||0)).map(x=>`<option value="${x.id}">${esc(tkey(x)+' · '+x.title)}</option>`).join('');
   const blocking=list('tasks').filter(x=>(x.blockedBy||[]).includes(t.id));
   const late=t.status!=='done'&&t.due&&t.due<T;
@@ -1263,7 +1263,7 @@ function renderDrawer(focusTitle){
         <label for="d-status">Statut</label><select id="d-status" data-df="status" class="st-${t.status}" style="font-weight:600">${STATUSES.map(s=>opt(s.k,s.l,t.status)).join('')}</select>
         <label for="d-prio">Priorité</label><select id="d-prio" data-df="priority" class="prio-${t.priority}" style="font-weight:600">${PRIOS.map(p=>opt(p.k,p.l,t.priority)).join('')}</select>
         <span class="k">Dates</span><span class="dates"><label class="sr" for="d-start">Début</label><input type="date" id="d-start" data-df="start" value="${esc(t.start||'')}" title="Début"><span class="due">→</span><label class="sr" for="d-due">Échéance</label><input type="date" id="d-due" data-df="due" value="${esc(t.due||'')}" title="Échéance">${t.due?`<span class="due ${late?'late':''}">${t.status==='done'?'':rel(t.due)}</span>`:''}</span>
-        <label for="d-event">OP liée</label><select id="d-event" data-df="eventId">${evOpts}</select>
+        <label for="d-event">OP liée</label><span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="d-event" data-df="eventId">${evOpts}</select>${t.projectId&&!list('events').some(e=>isOp(e)&&(e.projectId||'')===t.projectId)?`<span class="hint">Aucune OP dans ce projet</span>`:''}</span>
         <label for="d-tags">Étiquettes</label><input id="d-tags" data-df="tags" value="${esc(t.tags.join(', '))}" placeholder="ex. mailing, seo">
         <span class="k">Bloquée par</span><span class="deps">${t.blockedBy.map(id=>{const b=S.tasks[id];return b?`<span class="dep ${b.status==='done'?'ok':''}">${esc(tkey(b)+' · '+b.title)}<button data-dep-del="${id}" aria-label="Retirer la dépendance">×</button></span>`:'';}).join('')}<label class="sr" for="d-dep">Ajouter une dépendance</label><select id="d-dep" style="max-width:260px">${depOpts}</select></span>
         ${blocking.length?`<span class="k">Bloque</span><span class="deps">${blocking.map(b=>`<span class="dep">${esc(tkey(b)+' · '+b.title)}</span>`).join('')}</span>`:''}
@@ -1294,6 +1294,7 @@ function drawerField(el){
   else if(k==='start'){t.start=v;if(v&&t.due&&t.due<v)t.due=v;}
   else if(k==='due'){t.due=v;if(v&&t.start&&t.start>v)t.start=v;}
   else if(k==='eventId'){t.eventId=v;if(v&&!t.projectId&&S.events[v])t.projectId=S.events[v].projectId||'';}
+  else if(k==='projectId'){t.projectId=v;const ev=S.events[t.eventId];if(v&&ev&&(ev.projectId||'')!==v){t.eventId='';toast('OP liée retirée : elle appartient à un autre projet');}}
   else t[k]=v;
   commitDrawer();renderDrawer();
 }
