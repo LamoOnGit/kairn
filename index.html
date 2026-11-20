@@ -791,7 +791,7 @@ const BACKEND='supabase';
 const LSKEY=DEMO?'mes-tickets-demo':'mes-tickets-v2';
 const DEFAULT_TEMPLATE=[
 'J-21 | Brief de l’OP (mécanique, offres, cibles) | important',
-'J-14 | Brief agence / visuels | normal',
+'J-14 | Brief visuels (studio interne) | normal',
 'J-10 | Template mailing FR | important',
 'J-8 | Traductions mailing (EN, NL, DE) | normal',
 'J-6 | BAT et validation commerciale | urgent',
@@ -1662,7 +1662,7 @@ function renderDrawer(focusTitle){
         <label for="d-event">OP liée</label><span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="d-event" data-df="eventId">${evOpts}</select>${t.projectId&&!list('events').some(e=>isOp(e)&&(e.projectId||'')===t.projectId)?`<span class="hint">Aucune OP dans ce projet</span>`:''}</span>
         <label for="d-tags">Étiquettes</label><input id="d-tags" data-df="tags" value="${esc(t.tags.join(', '))}" placeholder="ex. mailing, seo">
         <span class="k">Bloquée par</span><span class="deps">${t.blockedBy.map(id=>{const b=S.tasks[id];return b?`<span class="dep ${b.status==='done'?'ok':''}">${esc(tkey(b)+' · '+b.title)}<button data-dep-del="${id}" aria-label="Retirer la dépendance">×</button></span>`:'';}).join('')}<label class="sr" for="d-dep">Ajouter une dépendance</label><select id="d-dep" style="max-width:260px">${depOpts}</select></span>
-        <label for="d-wait">En attente de</label><span class="wait-f"><input id="d-wait" data-df="waitingFor" list="d-wait-list" maxlength="120" value="${esc(t.waitingFor||'')}" placeholder="Personne ou chose (ex. validation de la direction, visuels de l’agence)"><datalist id="d-wait-list">${[...new Set(list('tasks').map(x=>x.waitingFor).filter(Boolean))].slice(0,30).map(v=>`<option value="${esc(v)}"></option>`).join('')}</datalist>${t.waitingFor&&t.waitingSince?`<span class="due ${diff(t.waitingSince,T)>=3?'soon':''}">${diff(t.waitingSince,T)<=0?'depuis aujourd’hui':'depuis '+diff(t.waitingSince,T)+' j'}</span>`:''}</span>
+        <label for="d-wait">En attente de</label><span class="wait-f"><input id="d-wait" data-df="waitingFor" list="d-wait-list" maxlength="120" value="${esc(t.waitingFor||'')}" placeholder="Personne ou chose (ex. validation de la direction, retour de l’IT)"><datalist id="d-wait-list">${[...new Set(list('tasks').map(x=>x.waitingFor).filter(Boolean))].slice(0,30).map(v=>`<option value="${esc(v)}"></option>`).join('')}</datalist>${t.waitingFor&&t.waitingSince?`<span class="due ${diff(t.waitingSince,T)>=3?'soon':''}">${diff(t.waitingSince,T)<=0?'depuis aujourd’hui':'depuis '+diff(t.waitingSince,T)+' j'}</span>`:''}</span>
         ${blocking.length?`<span class="k">Bloque</span><span class="deps">${blocking.map(b=>`<span class="dep">${esc(tkey(b)+' · '+b.title)}</span>`).join('')}</span>`:''}
       </div>
       <div class="dr-sec"><h4><label for="d-desc">Description</label></h4><textarea id="d-desc" placeholder="Contexte, liens, interlocuteurs…">${esc(t.desc||'')}</textarea></div>
@@ -1723,7 +1723,7 @@ function eventModal(id,preset={}){
   const ts=ex?evTasks(e.id).sort((a,b)=>(a.due||'9').localeCompare(b.due||'9')):[];
   const body=`<form id="ev-form" class="form" novalidate>
     <div class="tabs" id="e-tabs" role="tablist" ${isOp(e)?'':'hidden'}><button type="button" role="tab" class="tab on" data-pane="info">Infos</button><button type="button" role="tab" class="tab" data-pane="mail">Mailing <span class="tc" id="tc-mail"></span></button><button type="button" role="tab" class="tab" data-pane="cl">Checklist <span class="tc" id="tc-cl"></span></button>${ex?`<button type="button" role="tab" class="tab" data-pane="tasks">Tâches liées <span class="tc" id="tc-tasks"></span></button>`:''}</div>
-    <label class="field"><span>Nom</span><input id="e-title" required maxlength="200" value="${esc(e.title)}" placeholder="Ex. OP Black Friday, Réunion agence SEA…"></label>
+    <label class="field"><span>Nom</span><input id="e-title" required maxlength="200" value="${esc(e.title)}" placeholder="Ex. OP Black Friday, Point SEA…"></label>
     <div class="grid2">
       <div class="field"><label for="e-type" class="lbl-l">Type</label><select id="e-type">${allTypes().map(x=>opt(x.k,x.l,e.type)).join('')}</select>
         <button type="button" class="link" id="e-newtype-btn" style="align-self:flex-start;font-size:12px">+ Créer un type</button>
@@ -2191,14 +2191,14 @@ function seedDemo(){
     ev('Saint-Valentin : duo -20 %','op','netski',87,87)
   ];
   ev('Vente flash 48 h : -30 % sur les packs','flash','snow',3,4,{code:'FLASH30',conditions:'-30 % sur les packs famille, 48 h seulement',mails:[['L',0,'17:00'],['L',3,'08:00'],['R',4,'12:00']]});
-  S.meta.reminders={id:'reminders',items:[{id:newId(),text:'Relancer l’agence pour le devis des visuels de Noël',date:T,time:'',done:false},{id:newId(),text:'Envoyer le bilan Early booking à la direction',date:d(1),time:'10:00',done:false},{id:newId(),text:'Préparer le point hebdo',date:d(3),time:'09:30',done:false}]};
+  S.meta.reminders={id:'reminders',items:[{id:newId(),text:'Relancer l’IT pour la mise en ligne des bannières de Noël',date:T,time:'',done:false},{id:newId(),text:'Envoyer le bilan Early booking à la direction',date:d(1),time:'10:00',done:false},{id:newId(),text:'Préparer le point hebdo',date:d(3),time:'09:30',done:false}]};
   ev('Vente flash du week-end','flash','netski',18,19);
   ev('Vente flash fin de saison','flash','skiset',44,44);
   const mon=mondayOf(T);
   for(let w=-2;w<=10;w++){const s=diff(T,addDays(mon,7*w));ev('Point hebdo marketing','meeting','',s,s,{allDay:false,startTime:'10:00',endTime:'10:45',location:'Salle Mont-Blanc'});}
-  ev('Point agence SEA','meeting','data',1,1,{allDay:false,startTime:'14:00',endTime:'15:00',location:'Teams'});
+  ev('Point SEA','meeting','data',1,1,{allDay:false,startTime:'14:00',endTime:'15:00',location:'Teams'});
   ev('Comité commercial','meeting','',6,6,{allDay:false,startTime:'09:30',endTime:'11:00',location:'Salle Vanoise'});
-  ev('Revue SEO avec l’agence','meeting','snow',15,15,{allDay:false,startTime:'11:00',endTime:'12:00',location:'Teams'});
+  ev('Revue SEO','meeting','snow',15,15,{allDay:false,startTime:'11:00',endTime:'12:00',location:'Teams'});
   ev('Atelier animateurs réseau','meeting','skiset',22,22,{allDay:false,startTime:'14:00',endTime:'17:00'});
   ev('Reporting mensuel','deadline','data',11,11);
   ev('Reporting mensuel','deadline','data',41,41);
@@ -2216,14 +2216,14 @@ function seedDemo(){
   const c=(...a)=>a.map((x,i)=>({id:newId(),text:x.replace(/^\+/,''),done:x.startsWith('+')}));
   const com=(txt,dd)=>({id:newId(),text:txt,at:now-dd*864e5});
   mk('Dashboard acquisition hebdo (Eulerian → Excel)','data','todo','important',1,{recur:'weekly',tags:['reporting'],checklist:c('Export Eulerian','Mise à jour des onglets SEO / SEA / affiliation','Envoi à l’équipe')});
-  mk('Brief agence SEA : campagnes de la saison','data','waiting','important',3,{tags:['sea'],waitingFor:'Validation du budget par la direction',waitingSince:d(-4),comments:[com('Relancé la direction pour la validation du budget.',1)]});
+  mk('Plan SEA : campagnes de la saison','data','waiting','important',3,{tags:['sea'],waitingFor:'Validation du budget par la direction',waitingSince:d(-4),comments:[com('Relancé la direction pour la validation du budget.',1)]});
   mk('Optimiser les enchères Google Ads des stations','data','doing','normal',6,{start:-3,tags:['sea']});
   const seoA=mk('Relire les textes SEO : stations des Alpes du Nord','snow','review','normal',2,{start:-2,tags:['seo'],checklist:c('+Val Thorens','+Tignes','Les Arcs','La Plagne')});
   mk('Rédiger 10 pages stations des Pyrénées','snow','doing','important',9,{start:-5,tags:['seo'],checklist:c('+Font-Romeu','+Saint-Lary','+Peyragudes','Cauterets','Luz-Ardiden','Piau-Engaly','Les Angles','Ax 3 Domaines','La Mongie','Gourette')});
   mk('Corriger les redirections 404 remontées par l’audit','snow','todo','urgent',4,{tags:['seo'],desc:'37 URL en erreur dans l’audit RM Tech.'});
   mk('Mettre à jour le calendrier commercial','skiset','todo','urgent',-1);
   mk('Intégrer les nouveaux magasins adhérents dans Splio','skiset','todo','normal',13,{tags:['mailing']});
-  const brief=mk('Brief visuels hiver pour l’agence','snow','done','normal',-4);
+  const brief=mk('Brief visuels hiver','snow','done','normal',-4);
   mk('Mettre à jour les bannières de la home','snow','todo','normal',7,{blockedBy:[brief.id,seoA.id]});
   mk('Négocier la commission avec le partenaire affiliation','data','waiting','normal',16,{tags:['affiliation'],waitingFor:'Retour du partenaire',waitingSince:d(-1)});
   mk('Tableau de bord affiliation','data','todo','low',22,{tags:['affiliation','reporting']});
@@ -2250,7 +2250,7 @@ function loadSamples(){
     {id:newId(),title:'OP Black Friday',type:'op',projectId:ps,start:d(8),end:d(11),allDay:true,notes:'-20 % sur la location en ligne',createdAt:now,sample:true},
     {id:newId(),title:'OP Noël',type:'op',projectId:pk,start:d(25),end:d(36),allDay:true,notes:'',createdAt:now+1,sample:true},
     {id:newId(),title:'Rendu dossier séminaire',type:'deadline',projectId:pe,start:d(5),end:d(5),allDay:true,notes:'',createdAt:now+2,sample:true},
-    {id:newId(),title:'Point agence SEA',type:'meeting',projectId:ps,start:d(1),end:d(1),allDay:false,startTime:'14:00',endTime:'15:00',location:'Teams',notes:'',createdAt:now+3,sample:true},
+    {id:newId(),title:'Point SEA',type:'meeting',projectId:ps,start:d(1),end:d(1),allDay:false,startTime:'14:00',endTime:'15:00',location:'Teams',notes:'',createdAt:now+3,sample:true},
     {id:newId(),title:'Cours à l’école',type:'event',projectId:pe,start:d(6),end:d(6),allDay:false,startTime:'09:00',endTime:'17:00',notes:'',createdAt:now+4,sample:true}
   ];
   let n=nextNum();
@@ -2258,7 +2258,7 @@ function loadSamples(){
   const t1=mk('Template mailing Black Friday (FR/EN)',ps,'doing','critical',d(2),{start:d(-2),eventId:E[0].id,tags:['mailing'],checklist:[{id:newId(),text:'Maquette validée',done:true},{id:newId(),text:'Traduction EN',done:false},{id:newId(),text:'BAT envoyé',done:false}]});
   const t2=mk('Programmer l’envoi Black Friday dans Splio',ps,'todo','urgent',d(6),{eventId:E[0].id,tags:['mailing'],blockedBy:[t1.id]});
   const T2=[t1,t2,
-    mk('Bannières Black Friday sur le site',ps,'waiting','urgent',d(7),{eventId:E[0].id,desc:'En attente des visuels de l’agence.'}),
+    mk('Bannières Black Friday sur le site',ps,'waiting','urgent',d(7),{eventId:E[0].id,desc:'En attente des visuels.'}),
     mk('Dashboard acquisition hebdo (Eulerian → Excel)',ps,'todo','important',d(1),{tags:['reporting']}),
     mk('Relire les textes SEO des pages stations',ps,'review','normal',d(4),{start:d(0),tags:['seo']}),
     mk('Mettre à jour le calendrier commercial',pk,'todo','urgent',d(-1)),
