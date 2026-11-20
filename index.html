@@ -949,7 +949,7 @@ async function sbLoadAll(){
 }
 
 /* ---------- récaps des agents (Skout, Inbox, Echo) ---------- */
-const AGENTS=[{k:'Skout',c:'skout',l:'S',role:'Veille neige et stations pour le SEA'},{k:'Inbox',c:'inbox',l:'I',role:'Newsletters des concurrents'},{k:'Echo',c:'echo',l:'E',role:'Réputation Snowrental'}];
+const AGENTS=[{k:'Skout',c:'skout',l:'S',role:'Veille neige et stations pour le SEA'},{k:'Inbox',c:'inbox',l:'I',role:'Newsletters des concurrents'},{k:'Echo',c:'echo',l:'E',role:'Réputation des marques du groupe'}];
 let agReports=[],agMarking=false;
 function agSafeUrl(u){return typeof u==='string'&&/^https:\/\/claude\.ai\//.test(u)?u:'';}
 async function sbLoadAgents(){
