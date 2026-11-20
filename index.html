@@ -183,6 +183,11 @@ h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spaci
 .chip.ev{background:color-mix(in srgb,var(--pc) 20%,var(--surface));color:var(--ink);font-weight:600;border-left:3px solid var(--pc)}
 .chip.ev.op{background:var(--pc);color:#fff;border-left-color:transparent}
 .chip.tk{background:var(--surface-2);color:var(--ink)}
+.chip.evs{background:transparent;color:var(--ink);font-weight:500;padding-left:2px}
+.chip.evs::before{content:"";display:inline-block;width:6px;height:6px;border-radius:2px;margin-right:5px;vertical-align:1px;background:var(--pc)}
+.chip.evs:hover{background:var(--surface-2)}
+.tl-dot{position:absolute;top:12px;width:10px;height:10px;border-radius:2px;transform:rotate(45deg);background:var(--pc);border:0;padding:0;cursor:pointer}
+.tl-dot:focus-visible{outline:2px solid var(--accent)}
 .chip.ev.ext,.tl-bar.ext{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--pc) 38%,var(--surface)) 0 6px,color-mix(in srgb,var(--pc) 16%,var(--surface)) 6px 12px);color:var(--ink);border-left:3px dashed var(--pc)}
 .wev .bar.ext{background:repeating-linear-gradient(180deg,var(--pc) 0 4px,transparent 4px 7px)}
 .ext-tag{font:600 10px var(--font-mono);text-transform:uppercase;letter-spacing:.05em;padding:1px 6px;border-radius:4px;border:1px dashed currentColor;color:var(--muted);white-space:nowrap}
@@ -1021,15 +1026,17 @@ function calGrid(compact,pf){
     const info=dayInfo(ds),wk=i%7===0&&calPrefs().weeks?`<span class="wk" title="Semaine ${isoWeek(d)}">S${isoWeek(d)}</span>`:'',fer=info.fer?`<span class="ferie-l" title="${esc(info.fer)}">Férié</span>`:'';
     const ml=mailsOn(evs,ds),mb=ml.length?`<span class="mails">${ml.slice(0,4).map(mailBadge).join('')}</span>`:'';
     if(compact){
-      const key=de.filter(x=>isOp(x.e)||x.e.type==='deadline');
+      const key=de.filter(x=>isOp(x.e)||(x.e.type==='deadline'&&x.start===ds));
       const nt=dt.filter(t=>t.status!=='done');
       const lateDay=nt.length&&ds<T;
-      const chipsC=key.slice(0,2).map(x=>{const e=x.e,first=x.start===ds||i%7===0;return `<button class="chip ev ${x.ext?'ext':isOp(e)?'op':'dl'}" style="--pc:${esc(e.type==='deadline'?'var(--danger)':evColor(e))}" data-act="open-event" data-id="${e.id}" title="${esc(segTitle(x))}">${first?esc(segTitle(x)):'&nbsp;'}</button>`;}).join('')+(key.length>2?`<span class="more">+${key.length-2}</span>`:'');
+      const chipsC=key.slice(0,2).map(x=>{const e=x.e,first=x.start===ds||i%7===0;return `<button class="chip ${isOp(e)?'ev '+(x.ext?'ext':'op'):'evs'}" style="--pc:${esc(e.type==='deadline'?'var(--danger)':evColor(e))}" data-act="open-event" data-id="${e.id}" title="${esc(segTitle(x))}">${first?esc(segTitle(x)):'&nbsp;'}</button>`;}).join('')+(key.length>2?`<span class="more">+${key.length-2}</span>`:'');
       h+=`<div class="cell ${out?'out':''} ${i%7>=5?'wknd':''} ${ds===T?'today':''} ${info.fer?'ferie':''}" data-act="day" data-date="${ds}"><span class="dhead2">${wk}<span class="dn">${d.getDate()}</span>${fer}${nt.length?`<span class="tcount ${lateDay?'late':''}" title="${nt.length} tâche${nt.length>1?'s':''} à rendre${lateDay?' (en retard)':''}">${nt.length}<small> tâche${nt.length>1?'s':''}</small></span>`:''}<span class="sp"></span>${mb}</span>${chipsC}${vacHTML(info)}</div>`;
       continue;
     }
     const items=[
-      ...de.map(x=>{const e=x.e,first=x.start===ds||i%7===0;const tm=x.ext?'':evTime(e);return `<button class="chip ev ${x.ext?'ext':isOp(e)?'op':''}" style="--pc:${esc(evColor(e))}" data-act="open-event" data-id="${e.id}" title="${esc(segTitle(x)+' · '+(x.start===x.end?dShort(x.start):dDay(x.start)+' → '+dDay(x.end)))}">${first?esc((tm?tm.slice(0,5)+' ':'')+segTitle(x)):'&nbsp;'}</button>`;}),
+      ...de.filter(x=>isOp(x.e)||x.start===ds).map(x=>{const e=x.e,first=x.start===ds||i%7===0;const tm=x.ext?'':evTime(e);
+        if(!isOp(e)){const multi=x.end!==x.start;return `<button class="chip evs" style="--pc:${esc(e.type==='deadline'?'var(--danger)':evColor(e))}" data-act="open-event" data-id="${e.id}" title="${esc(e.title+' · '+(multi?dDay(x.start)+' → '+dDay(x.end):dShort(x.start))+(tm?' · '+tm:''))}">${esc((tm?tm.slice(0,5)+' ':'')+evIcon(e)+e.title)}${multi?` <span class="due">→ ${dDay(x.end)}</span>`:''}</button>`;}
+        return `<button class="chip ev ${x.ext?'ext':isOp(e)?'op':''}" style="--pc:${esc(evColor(e))}" data-act="open-event" data-id="${e.id}" title="${esc(segTitle(x)+' · '+(x.start===x.end?dShort(x.start):dDay(x.start)+' → '+dDay(x.end)))}">${first?esc((tm?tm.slice(0,5)+' ':'')+segTitle(x)):'&nbsp;'}</button>`;}),
       ...dt.map(t=>`<button class="chip tk ${t.status==='done'?'done':''} ${t.status!=='done'&&ds<T?'late':''}" style="--dc:${pr(t.priority).c}" data-act="open-task" data-id="${t.id}" title="${esc(tkey(t)+' · '+t.title)}">${esc(t.title)}</button>`)
     ];
     h+=`<div class="cell ${out?'out':''} ${i%7>=5?'wknd':''} ${ds===T?'today':''} ${info.fer?'ferie':''}" data-act="day" data-date="${ds}"><span class="dhead2">${wk}<span class="dn">${d.getDate()}</span>${info.fer?`<span class="ferie-l" title="${esc(info.fer)}">${esc(info.fer)}</span>`:''}<span class="sp"></span>${mb}</span>${items.slice(0,max).join('')}${items.length>max?`<span class="more">+${items.length-max}</span>`:''}${vacHTML(info)}</div>`;
@@ -1246,7 +1253,7 @@ function viewKanban(){
 function viewCalendar(){
   return `<div class="cal-head">${calNav('h2')}<span class="spacer"></span>${projectFilterSelect()}</div>
   <div class="cal-wrap">${calGrid(false)}</div>
-  <div class="legend"><span class="vac" style="position:static"><i class="z-A">A</i><i class="z-B">B</i><i class="z-C">C</i></span><span>vacances scolaires par zone</span><span>S48 : numéro de semaine</span><span>Bandeau plein : OP commerciale</span><span>Bandeau clair : événement, réunion, rendu</span><span>Point : priorité de la tâche</span><span>L : envoi du mail · R : relance</span><span>Clique sur un jour pour voir le détail ou ajouter</span></div>`;
+  <div class="legend"><span class="vac" style="position:static"><i class="z-A">A</i><i class="z-B">B</i><i class="z-C">C</i></span><span>vacances scolaires par zone</span><span>S48 : numéro de semaine</span><span>Bandeau plein : OP commerciale</span><span>Ligne fine : événement, réunion, rendu</span><span>Point : priorité de la tâche</span><span>L : envoi du mail · R : relance</span><span>Clique sur un jour pour voir le détail ou ajouter</span></div>`;
 }
 
 /* ---- chronologie (Gantt) ---- */
@@ -1262,13 +1269,15 @@ function viewTimeline(){
   const row=(label,track,cls='')=>`<div class="tl-row ${cls}">${label}<div class="tl-track" style="${bg}">${track}</div></div>`;
   let rows='';
   // OP & événements en couloirs
-  const evs=list('events').filter(inProj).flatMap(segs).filter(x=>x.end>=start&&x.start<=end).sort((a,b)=>a.start.localeCompare(b.start));
+  const evs=list('events').filter(e=>inProj(e)&&isOp(e)).flatMap(segs).filter(x=>x.end>=start&&x.start<=end).sort((a,b)=>a.start.localeCompare(b.start));
+  const others=list('events').filter(e=>inProj(e)&&!isOp(e)&&e.start>=start&&e.start<=end);
   const lanes=[];evs.forEach(x=>{let l=lanes.findIndex(le=>le<x.start);if(l<0){lanes.push('');l=lanes.length-1;}lanes[l]=x.end;x._lane=l;});
-  rows+=row(`<div class="tl-label group">OP & événements</div>`,'','group');
+  rows+=row(`<div class="tl-label group">OP commerciales</div>`,'','group');
   for(let l=0;l<Math.max(1,lanes.length);l++){
     const bars=evs.filter(x=>x._lane===l).map(x=>{const e=x.e,c=clipBar(x.start,x.end);return c?`<button class="tl-bar ${x.ext?'ext':''}" style="--pc:${esc(evColor(e))};left:${c.left+2}px;width:${Math.max(c.width,W-4)}px" data-act="open-event" data-id="${e.id}" title="${esc(segTitle(x)+' · '+dDay(x.start)+' → '+dDay(x.end))}">${esc(segTitle(x))}</button>`:'';}).join('');
-    rows+=row(`<div class="tl-label" style="cursor:default;color:var(--muted)">${l===0&&!evs.length?'Aucun événement sur la période':''}</div>`,bars);
+    rows+=row(`<div class="tl-label" style="cursor:default;color:var(--muted)">${l===0&&!evs.length?'Aucune OP sur la période':''}</div>`,bars);
   }
+  if(others.length)rows+=row(`<div class="tl-label" style="cursor:default;color:var(--muted)">Autres événements</div>`,others.map(e=>`<button class="tl-dot" style="--pc:${esc(e.type==='deadline'?'var(--danger)':evColor(e))};left:${x(e.start)+W/2-5}px" data-act="open-event" data-id="${e.id}" title="${esc(et(e.type).l+' · '+e.title+' · '+evRange(e)+(evTime(e)?' · '+evTime(e):''))}" aria-label="${esc(e.title)}"></button>`).join(''));
   // tâches par projet
   const groups=[...projSorted().filter(p=>inProj({projectId:p.id})).map(p=>({id:p.id,name:p.name,color:p.color})),...(inProj({projectId:''})?[{id:'',name:'Sans projet',color:'#9aa0b2'}]:[])];
   let hidden=0;
@@ -1923,7 +1932,7 @@ function seedDemo(){
     ev('Calendrier de l’Avent','op','netski',12,35,{notes:'Une offre par jour sur les réseaux sociaux'}),
     ev('OP Noël','op','skiset',25,36,{code:'NOEL26',conditions:'Carte cadeau de 20 € offerte dès 150 € de location',mails:[['L',25,'09:00'],['R',30],['R',34]]}),
     ev('Soldes d’hiver','op','snow',49,76,{ext:[77,83],conditions:'Démarques 1 à 3 : -20 %, -30 %, -40 %',mails:[['L',49],['R',56],['R',63],['R',77]]}),
-    ev('Vacances de février – zone C','op','skimium',86,100),
+    ev('OP Février : packs famille','op','skimium',86,100),
     ev('Saint-Valentin : duo -20 %','op','netski',87,87)
   ];
   ev('Vente flash 48 h : -30 % sur les packs','flash','snow',3,4,{code:'FLASH30',conditions:'-30 % sur les packs famille, 48 h seulement',mails:[['L',0,'17:00'],['L',3,'08:00'],['R',4,'12:00']]});
