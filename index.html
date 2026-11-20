@@ -502,6 +502,28 @@ h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spaci
 .waiting{font:600 11px var(--font-body);color:var(--warn);background:var(--warn-soft);padding:1px 6px;border-radius:4px;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis}
 .wait-f{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .dr-fields .wait-f input{max-width:340px}
+.d-bottom{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:16px;align-items:start}
+.banners.b2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.rem-panel{margin-top:42px}
+.rem-panel h2{margin-bottom:6px}
+.rem-count{font:700 12px var(--font-body);background:var(--orange);color:#fff;border-radius:999px;padding:1px 8px}
+.rem-list{display:flex;flex-direction:column}
+.rem{display:flex;align-items:center;gap:10px;padding:7px 4px;border-top:1px solid var(--line);font-size:14px}
+.rem:first-child{border-top:0}
+.rem.later{opacity:.75}
+.rem-t{all:unset;cursor:pointer;flex:1;min-width:0;line-height:1.35}
+.rem-t.static{cursor:default}
+.rem-t:hover:not(.static){color:var(--accent)}
+.rem-t:focus-visible{outline:2px solid var(--accent)}
+.rem-op{font-size:12px;color:var(--muted);white-space:nowrap}
+.rem-op::before{content:"";display:inline-block;width:7px;height:7px;border-radius:2px;background:var(--pc);margin:0 4px 0 2px;vertical-align:1px}
+.rem-ic{width:10px;height:10px;border-radius:3px;background:var(--pc);flex:none;margin:0 4px}
+.rem-wait{width:18px;text-align:center;flex:none}
+.rem .check{width:18px;height:18px}
+.rem-add{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.rem-add input{padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:13px}
+.rem-add #rem-text{flex:1;min-width:160px}
+@media (max-width:1180px){.d-bottom{grid-template-columns:1fr}.rem-panel{margin-top:0}}
 @media (max-width:1180px){.d-top{grid-template-columns:1fr}.week{contain:none;max-height:560px;flex:none}}
 @media (max-width:820px){
   .app{grid-template-columns:1fr;grid-template-rows:auto 1fr}
@@ -973,7 +995,7 @@ function viewDashboard(){
   const k=(cls,v,l,a)=>`<button class="kchip ${cls}" data-act="kpi" data-k="${a}"><b>${v}</b>${l}</button>`;
   return `
   <div class="dhead"><span class="date">${dLong(T)}</span>
-    ${late.length?k('alert',late.length,'en retard','late'):''}${k('',week.length,'à rendre cette semaine','week')}${urg.length?k('',urg.length,'urgentes','urgent'):''}
+    ${late.length?k('alert',late.length,'en retard','late'):''}${k('',week.length,'à rendre cette semaine','week')}${urg.length?k('',urg.length,'urgentes','urgent'):''}${(()=>{const n=remindersCount();return n?`<button class="kchip" data-act="goto-rem"><b>${n}</b>rappel${n>1?'s':''}</button>`:'';})()}
   </div>
   <div class="d-top">
     <section class="panel">${calSwitchHTML()}<div class="cal-head">${calNav('h3')}<span class="spacer"></span><button class="link" data-act="dcal-detail">Voir le détail</button></div><div class="cal-slide ${ui._dir}" id="dcal-slide">${calGrid(true,ui.dcal)}</div>
@@ -981,7 +1003,7 @@ function viewDashboard(){
     <section class="panel"><h2>Cette semaine<span class="r"><a class="link" href="#taches">Toutes les tâches</a></span></h2>${weekHTML()}</section>
   </div>
   ${opBannersHTML()}
-  ${dueBannersHTML()}`;
+  <div class="d-bottom"><div>${dueBannersHTML()}</div>${remindersHTML()}</div>`;
 }
 function weekHTML(){
   const T=today(),open=openTasks();
@@ -1015,12 +1037,49 @@ function opBannersHTML(){
       ${cl.length?`<span class="prep"><span class="bar"><i style="width:${Math.round(done/cl.length*100)}%"></i></span><span>Checklist ${done}/${cl.length}</span></span>`:''}
     </button>`;}).join('')}</div>`;
 }
+/* ---- rappels ---- */
+const remDoc=()=>S.meta.reminders||{id:'reminders',items:[]};
+const remItems=()=>Array.isArray(remDoc().items)?remDoc().items:[];
+function saveRem(items){save('meta',{...remDoc(),id:'reminders',items});}
+function autoReminders(){
+  const T=today(),tm=addDays(T,1),out=[];
+  list('events').forEach(e=>{
+    (Array.isArray(e.mails)?e.mails:[]).forEach(m=>{if(m.date===T&&!m.sent)out.push({k:'mail',e,m,sort:'1'+(m.time||'99')});});
+    if(isOp(e)){
+      (Array.isArray(e.checklist)?e.checklist:[]).forEach(c=>{if(!c.done&&c.date&&c.date<=T)out.push({k:'cl',e,c,late:c.date<T,sort:'2'+c.date});});
+      if(e.start===T)out.push({k:'opstart',e,sort:'0'});
+      else if(e.start===tm)out.push({k:'opsoon',e,sort:'3'});
+      if(effEnd(e)===T&&e.start!==T)out.push({k:'opend',e,sort:'0'});
+    }
+  });
+  openTasks().forEach(t=>{if(t.waitingFor&&t.waitingSince&&diff(t.waitingSince,T)>=3)out.push({k:'relance',t,n:diff(t.waitingSince,T),sort:'4'});});
+  return out.sort((a,b)=>a.sort.localeCompare(b.sort));
+}
+function remindersCount(){const T=today();return autoReminders().length+remItems().filter(r=>!r.done&&r.date<=T).length;}
+function remindersHTML(){
+  const T=today(),auto=autoReminders(),man=remItems().filter(r=>!r.done).sort((a,b)=>(a.date+(a.time||'')).localeCompare(b.date+(b.time||'')));
+  const now=man.filter(r=>r.date<=T),later=man.filter(r=>r.date>T);
+  const row=x=>{const e=x.e;
+    if(x.k==='mail')return `<div class="rem"><b class="mailb static k-${esc(x.m.kind)}" style="--pc:${esc(evColor(e))}">${x.m.kind}</b><button class="rem-t" data-act="open-event" data-id="${e.id}">${x.m.kind==='R'?'Envoyer la relance':'Envoyer le mail'} · ${esc(evIcon(e)+e.title)}${x.m.time?` <span class="due">${esc(x.m.time)}</span>`:''}</button><button class="btn sm" data-act="rem-mail-sent" data-id="${e.id}" data-mid="${esc(x.m.id)}">Envoyé</button></div>`;
+    if(x.k==='cl')return `<div class="rem"><button class="check" data-act="rem-cl" data-id="${e.id}" data-cid="${esc(x.c.id)}" aria-label="Cocher ${esc(x.c.text)}"></button><button class="rem-t" data-act="open-event" data-id="${e.id}">${esc(x.c.text)} <span class="rem-op" style="--pc:${esc(evColor(e))}">${esc(evIcon(e)+e.title)}${S.projects[e.projectId]?' · '+esc(S.projects[e.projectId].name):''}</span></button><span class="due ${x.late?'late':''}">${x.late?rel(x.c.date):'aujourd’hui'}</span></div>`;
+    if(x.k==='opstart'||x.k==='opsoon'||x.k==='opend')return `<div class="rem"><span class="rem-ic" style="--pc:${esc(evColor(e))}"></span><button class="rem-t" data-act="open-event" data-id="${e.id}">${x.k==='opstart'?'Lancement aujourd’hui':x.k==='opsoon'?'Lancement demain':'Dernier jour'} : ${esc(evIcon(e)+e.title)}${e.code?` <span class="code-chip light">${esc(e.code)}</span>`:''}</button></div>`;
+    if(x.k==='relance')return `<div class="rem"><span class="rem-wait">⏳</span><button class="rem-t" data-act="open-task" data-id="${x.t.id}">Relancer : ${esc(x.t.waitingFor)} <span class="hint">· ${esc(x.t.title)}</span></button><span class="due soon">${x.n} j</span></div>`;
+    return '';};
+  const mrow=r=>`<div class="rem ${r.date>T?'later':''}"><button class="check" data-act="rem-done" data-id="${esc(r.id)}" aria-label="Terminer le rappel ${esc(r.text)}"></button><span class="rem-t static">${esc(r.text)}</span><span class="due ${r.date<T?'late':''}">${r.date===T?(r.time||'aujourd’hui'):r.date<T?rel(r.date):dShort(r.date)+(r.time?' '+r.time:'')}</span><button class="icon-btn" data-act="rem-del" data-id="${esc(r.id)}" aria-label="Supprimer le rappel" style="font-size:16px">×</button></div>`;
+  const n=auto.length+now.length;
+  return `<section class="panel rem-panel" id="rappels"><h2>Rappels ${n?`<span class="rem-count">${n}</span>`:''}</h2>
+    <div class="rem-list">${auto.map(row).join('')}${now.map(mrow).join('')}${!n?'<div class="empty-line">Rien à te rappeler aujourd’hui.</div>':''}</div>
+    ${later.length?`<div class="lbl" style="margin:10px 0 2px">À venir</div><div class="rem-list">${later.slice(0,4).map(mrow).join('')}</div>`:''}
+    <form class="rem-add" id="rem-form"><label class="sr" for="rem-text">Nouveau rappel</label><input id="rem-text" placeholder="Me rappeler de…" maxlength="160"><label class="sr" for="rem-date">Date</label><input type="date" id="rem-date" value="${T}"><label class="sr" for="rem-time">Heure</label><input type="time" id="rem-time"><button class="btn sm primary" type="submit">Ajouter</button></form>
+  </section>`;
+}
+
 function dueBannersHTML(){
   const T=today(),lim=addDays(T,3);
   const ts=openTasks().filter(t=>t.due&&t.due<=lim).sort((a,b)=>a.due.localeCompare(b.due)||PRANK[a.priority]-PRANK[b.priority]);
   const head=`<div class="section-h"><h2>À rendre très bientôt</h2><small>retards + 3 jours</small><span class="r">${ts.length>4?`<button class="btn sm" data-act="kpi" data-k="week7late">Tout voir (${ts.length})</button>`:''}</span></div>`;
   if(!ts.length)return head+`<div class="dash-empty">Rien à rendre dans les 3 prochains jours.</div>`;
-  return head+`<div class="banners b4">${ts.slice(0,4).map(t=>{
+  return head+`<div class="banners b2">${ts.slice(0,4).map(t=>{
     const d=diff(T,t.due),uc=d<0?'var(--danger)':d===0?'var(--orange)':'var(--warn)';
     return `<button class="due-banner" style="--uc:${uc}" data-act="open-task" data-id="${t.id}">
       <span class="when">${rel(t.due)}</span>
@@ -1788,7 +1847,8 @@ function seedDemo(){
     ev('Vacances de février – zone C','op','skimium',86,100),
     ev('Saint-Valentin : duo -20 %','op','netski',87,87)
   ];
-  ev('Vente flash 48 h : -30 % sur les packs','flash','snow',3,4,{notes:'Code FLASH30, mailing + push'});
+  ev('Vente flash 48 h : -30 % sur les packs','flash','snow',3,4,{code:'FLASH30',conditions:'-30 % sur les packs famille, 48 h seulement',mails:[['L',0,'17:00'],['L',3,'08:00'],['R',4,'12:00']]});
+  S.meta.reminders={id:'reminders',items:[{id:newId(),text:'Relancer l’agence pour le devis des visuels de Noël',date:T,time:'',done:false},{id:newId(),text:'Envoyer le bilan Early booking à la direction',date:d(1),time:'10:00',done:false},{id:newId(),text:'Préparer le point hebdo',date:d(3),time:'09:30',done:false}]};
   ev('Vente flash du week-end','flash','netski',18,19);
   ev('Vente flash fin de saison','flash','skiset',44,44);
   const mon=mondayOf(T);
@@ -1902,6 +1962,11 @@ document.addEventListener('click',e=>{
     case 'open-event':if(inModal)hideModal();if(drawer)closeDrawer();eventModal(id);break;
     case 'new-event':if(inModal)hideModal();if(drawer)closeDrawer();eventModal(null,{start:a.dataset.start,type:a.dataset.type});break;
     case 'new-project':projectModal(null);break;
+    case 'goto-rem':{const r=$('#rappels');r&&r.scrollIntoView({behavior:'smooth',block:'start'});break;}
+    case 'rem-mail-sent':{const ev=S.events[id];if(ev){save('events',{...ev,mails:(ev.mails||[]).map(m=>m.id===a.dataset.mid?{...m,sent:true}:m)});toast('Envoi noté comme fait');}break;}
+    case 'rem-cl':{const ev=S.events[id];if(ev){save('events',{...ev,checklist:(ev.checklist||[]).map(c=>c.id===a.dataset.cid?{...c,done:true}:c)});toast('Étape cochée');}break;}
+    case 'rem-done':saveRem(remItems().map(r=>r.id===id?{...r,done:true}:r));toast('Rappel terminé');break;
+    case 'rem-del':saveRem(remItems().filter(r=>r.id!==id));break;
     case 'del-task':{e.stopPropagation();const t=S.tasks[id];if(t)deleteTasks([t],`${tkey(t)} « ${t.title} » sera supprimée définitivement.`);break;}
     case 'del-done':{const ts=filtered({ignoreStatus:true}).filter(t=>t.status==='done');if(ts.length)deleteTasks(ts,`${ts.length} tâche(s) terminée(s) seront supprimées définitivement.`);break;}
     case 'edit-project':projectModal(id);break;
@@ -1929,7 +1994,8 @@ document.addEventListener('click',e=>{
     case 'clear-samples':clearSamples();break;
   }
 });
-document.addEventListener('submit',e=>{if(e.target.id==='login-form'){e.preventDefault();doLogin(false);}});
+document.addEventListener('submit',e=>{if(e.target.id==='login-form'){e.preventDefault();doLogin(false);}
+  if(e.target.id==='rem-form'){e.preventDefault();const text=$('#rem-text').value.trim();if(!text){$('#rem-text').focus();return;}saveRem(remItems().filter(r=>!r.done||r.date>=addDays(today(),-30)).concat({id:newId(),text,date:$('#rem-date').value||today(),time:$('#rem-time').value||'',done:false}));toast('Rappel ajouté');}});
 document.addEventListener('click',e=>{if(e.target.id==='lg-signup')doLogin(true);});
 document.addEventListener('change',e=>{
   if(drawer&&droot.contains(e.target)){
