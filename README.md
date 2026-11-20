@@ -8,4 +8,4 @@ Outil de ticketing perso (projets, tâches, OP commerciales, calendrier, chronol
 
 Mise en ligne : chaque push sur `main` met le site à jour (GitHub Pages ou Netlify).
 
-Site : https://lamoongit.github.io/mes-tickets/
+Site : https://lamoongit.github.io/kairn/
