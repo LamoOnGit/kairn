@@ -524,6 +524,31 @@ h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spaci
 .rem-add input{padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:13px}
 .rem-add #rem-text{flex:1;min-width:160px}
 @media (max-width:1180px){.d-bottom{grid-template-columns:1fr}.rem-panel{margin-top:0}}
+.pane-off{display:none!important}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:-6px 0 4px;overflow-x:auto}
+.tab{all:unset;cursor:pointer;padding:8px 12px;font-size:14px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.tab:focus-visible{outline:2px solid var(--accent)}
+.tab .tc{font:500 11px var(--font-mono);color:var(--faint)}
+.mailb.sent{opacity:.4;text-decoration:line-through}
+.wev .t.is-sent{color:var(--faint);text-decoration:line-through}
+.sent-tag{font:600 11px var(--font-body);color:var(--ok);white-space:nowrap}
+.pc-ops{display:flex;flex-direction:column;gap:4px}
+.pc-op{all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;background:var(--surface-2);border-left:4px solid var(--pc);font-size:13px;font-weight:600}
+.pc-op:hover{background:color-mix(in srgb,var(--pc) 14%,var(--surface))}
+.pc-op:focus-visible{outline:2px solid var(--accent)}
+.pc-op .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag.recur{color:var(--accent);background:var(--accent-soft)}
+.wk{font:600 10px var(--font-mono);color:var(--faint);margin-right:2px}
+.cell{position:relative}
+.cell.ferie{background:color-mix(in srgb,var(--danger-soft) 55%,var(--surface))}
+.ferie-l{font:600 10px var(--font-body);color:var(--danger);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.vac{display:inline-flex;gap:2px;margin-top:auto;align-self:flex-end}
+.vac i{font:700 9px/1 var(--font-mono);font-style:normal;color:#fff;padding:2px 4px;border-radius:3px}
+.vac .z-A{background:#e67700}.vac .z-B{background:#0c8599}.vac .z-C{background:#c2255c}
+.vac-tag{font:600 10px var(--font-body);text-transform:none;letter-spacing:0;color:#c2255c;background:color-mix(in srgb,#c2255c 12%,var(--surface));padding:1px 6px;border-radius:4px}
+.wday h4 .ferie-l{font-size:11px;text-transform:none;letter-spacing:0}
 @media (max-width:1180px){.d-top{grid-template-columns:1fr}.week{contain:none;max-height:560px;flex:none}}
 @media (max-width:820px){
   .app{grid-template-columns:1fr;grid-template-rows:auto 1fr}
@@ -650,10 +675,31 @@ function hexToHsl(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+
 function hslToHex(h,s2,l){h=((h%360)+360)%360;s2/=100;l/=100;const k=n=>(n+h/30)%12,a=s2*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));return '#'+[f(0),f(8),f(4)].map(x=>Math.round(x*255).toString(16).padStart(2,'0')).join('');}
 const OP_VARIANTS=[[0,0],[34,-4],[-34,-4],[0,-13],[64,-6],[-64,-6],[18,8],[-18,8],[0,10],[96,-6]];
 function shade(hex,i){if(!/^#[0-9a-f]{3,6}$/i.test(hex))return hex;const [h,s2,l]=hexToHsl(hex),[dh,dl]=OP_VARIANTS[i%OP_VARIANTS.length];return hslToHex(h+dh,Math.max(s2,45),Math.min(58,Math.max(28,l+dl)));}
+/* vacances scolaires 2026-2027 (arrêté du 22 octobre 2025) : du 1er jour de vacances au dernier */
+const VACANCES=[{n:'Toussaint',z:'ABC',s:'2026-10-17',e:'2026-11-01'},{n:'Noël',z:'ABC',s:'2026-12-19',e:'2027-01-03'},
+  {n:'Hiver',z:'A',s:'2027-02-13',e:'2027-02-28'},{n:'Hiver',z:'B',s:'2027-02-20',e:'2027-03-07'},{n:'Hiver',z:'C',s:'2027-02-06',e:'2027-02-21'},
+  {n:'Printemps',z:'A',s:'2027-04-10',e:'2027-04-25'},{n:'Printemps',z:'B',s:'2027-04-17',e:'2027-05-02'},{n:'Printemps',z:'C',s:'2027-04-03',e:'2027-04-18'},
+  {n:'Pont de l’Ascension',z:'ABC',s:'2027-05-07',e:'2027-05-07'},{n:'Été',z:'ABC',s:'2027-07-03',e:'2027-08-31'}];
+const _ferCache={};
+function feries(y){
+  if(_ferCache[y])return _ferCache[y];
+  const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;
+  const pq=iso(new Date(y,mo-1,da)),r={};
+  [[`${y}-01-01`,'Jour de l’an'],[addDays(pq,1),'Lundi de Pâques'],[`${y}-05-01`,'Fête du travail'],[`${y}-05-08`,'Victoire 1945'],[addDays(pq,39),'Ascension'],[addDays(pq,50),'Lundi de Pentecôte'],[`${y}-07-14`,'Fête nationale'],[`${y}-08-15`,'Assomption'],[`${y}-11-01`,'Toussaint'],[`${y}-11-11`,'Armistice'],[`${y}-12-25`,'Noël']].forEach(([d2,n])=>r[d2]=n);
+  return _ferCache[y]=r;
+}
+function isoWeek(dt){const d=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate()));const n=d.getUTCDay()||7;d.setUTCDate(d.getUTCDate()+4-n);const y0=new Date(Date.UTC(d.getUTCFullYear(),0,1));return Math.ceil(((d-y0)/864e5+1)/7);}
+const calPrefs=()=>{const c=(S.meta.settings&&S.meta.settings.cal)||{};return {zones:Array.isArray(c.zones)?c.zones:['A','B','C'],weeks:c.weeks!==false,feries:c.feries!==false};};
+function dayInfo(ds){
+  const cp=calPrefs(),fer=cp.feries?feries(+ds.slice(0,4))[ds]||'':'';
+  const zones=[];VACANCES.forEach(v=>{if(v.s<=ds&&v.e>=ds)v.z.split('').forEach(z=>{if(cp.zones.includes(z)&&!zones.some(x=>x.z===z))zones.push({z,n:v.n});});});
+  zones.sort((a,b)=>a.z.localeCompare(b.z));return {fer,zones};
+}
+function vacHTML(info){if(!info.zones.length)return '';return `<span class="vac" title="${esc('Vacances scolaires : '+info.zones.map(x=>x.n+' zone '+x.z).join(', '))}">${info.zones.map(x=>`<i class="z-${x.z}">${x.z}</i>`).join('')}</span>`;}
 const MAILK={L:'Mail de lancement',R:'Relance'};
 const mailsOn=(evs,ds)=>evs.flatMap(e=>(Array.isArray(e.mails)?e.mails:[]).filter(m=>m&&m.date===ds).map(m=>({e,m}))).sort((a,b)=>a.m.kind.localeCompare(b.m.kind));
-const mailBadge=x=>`<button class="mailb k-${esc(x.m.kind)}" style="--pc:${esc(evColor(x.e))}" data-act="open-event" data-id="${x.e.id}" title="${esc(MAILK[x.m.kind]+' · '+evIcon(x.e)+x.e.title+(x.m.time?' · '+x.m.time:''))}" aria-label="${esc(MAILK[x.m.kind]+' : '+x.e.title)}">${x.m.kind==='R'?'R':'L'}</button>`;
-function mailLine(x){const e=x.e;return `<div class="wev" data-act="open-event" data-id="${e.id}" tabindex="0" role="button" style="--pc:${esc(evColor(e))}"><span class="mailb k-${esc(x.m.kind)} static">${x.m.kind}</span><span class="tm">${esc(x.m.time||'')}</span><span class="t">${MAILK[x.m.kind]} · ${esc(evIcon(e)+e.title)}</span></div>`;}
+const mailBadge=x=>`<button class="mailb k-${esc(x.m.kind)} ${x.m.sent?'sent':''}" style="--pc:${esc(evColor(x.e))}" data-act="open-event" data-id="${x.e.id}" title="${esc(MAILK[x.m.kind]+' · '+evIcon(x.e)+x.e.title+(x.m.time?' · '+x.m.time:'')+(x.m.sent?' · envoyé':''))}" aria-label="${esc(MAILK[x.m.kind]+' : '+x.e.title)}">${x.m.kind==='R'?'R':'L'}</button>`;
+function mailLine(x){const e=x.e;return `<div class="wev" data-act="open-event" data-id="${e.id}" tabindex="0" role="button" style="--pc:${esc(evColor(e))}"><span class="mailb k-${esc(x.m.kind)} static ${x.m.sent?'sent':''}">${x.m.kind}</span><span class="tm">${esc(x.m.time||'')}</span><span class="t ${x.m.sent?'is-sent':''}">${MAILK[x.m.kind]} · ${esc(evIcon(e)+e.title)}</span>${x.m.sent?'<span class="sent-tag">✓ envoyé</span>':''}</div>`;}
 function evColor(e){
   if(e.color)return e.color;
   const base=pColor(e.projectId);if(!isOp(e))return base;
@@ -840,10 +886,27 @@ async function init(){
 
 /* ---------- logique métier ---------- */
 function nextNum(){return list('tasks').reduce((m,t)=>Math.max(m,t.num||0),0)+1;}
+const RECUR={workday:'Chaque jour ouvré',weekly:'Chaque semaine',biweekly:'Toutes les 2 semaines',monthly:'Chaque mois'};
+const RECUR_S={workday:'Quotidien',weekly:'Hebdo',biweekly:'2 sem.',monthly:'Mensuel'};
+function nextOccur(ds,r){
+  if(r==='weekly')return addDays(ds,7);if(r==='biweekly')return addDays(ds,14);
+  if(r==='workday'){let n=addDays(ds,1);while([0,6].includes(parse(n).getDay()))n=addDays(n,1);return n;}
+  if(r==='monthly'){const d=parse(ds),y=d.getFullYear(),m=d.getMonth()+1,last=new Date(y,m+1,0).getDate();return iso(new Date(y,m,Math.min(d.getDate(),last)));}
+  return ds;
+}
+function spawnNext(o){
+  const base=o.due||today();let due=nextOccur(base,o.recur);while(due<today())due=nextOccur(due,o.recur);
+  const shift=diff(base,due);
+  const n={...clone(o),id:newId(),num:nextNum(),status:'todo',due,start:o.start?addDays(o.start,shift):'',doneAt:null,recurNext:'',waitingFor:'',waitingSince:'',
+    checklist:(o.checklist||[]).map(c=>({...c,id:newId(),done:false})),comments:[{id:newId(),sys:true,text:`Créée automatiquement (récurrence : ${RECUR[o.recur]})`,at:Date.now()}],createdAt:Date.now()};
+  save('tasks',n);setTimeout(()=>toast(`Prochaine occurrence créée : ${tkey(n)} pour le ${dShort(due)}`),400);return n;
+}
 function withStatus(t,s){
   const o=clone(t);if(o.status===s)return o;
   o.comments=(o.comments||[]).concat({id:newId(),sys:true,text:`Statut : ${st(o.status).l} → ${st(s).l}`,at:Date.now()}).slice(-120);
-  o.status=s;o.doneAt=s==='done'?Date.now():null;return o;
+  o.status=s;o.doneAt=s==='done'?Date.now():null;
+  if(s==='done'&&o.recur&&RECUR[o.recur]&&!o.recurNext&&S.tasks[o.id]){const n=spawnNext(o);o.recurNext=n.id;}
+  return o;
 }
 function parseTemplate(txt){
   const out=[];
@@ -885,7 +948,7 @@ function dueBadge(t){
 }
 function checkBtn(t){const on=t.status==='done';return `<button class="check ${on?'on':''}" data-act="toggle-done" data-id="${t.id}" aria-label="${on?'Rouvrir':'Terminer'} : ${esc(t.title)}">${on?CHECK_SVG:''}</button>`;}
 function clProg(t){const c=t.checklist||[];if(!c.length)return '';return `<span class="due" title="Sous-tâches">☑ ${c.filter(x=>x.done).length}/${c.length}</span>`;}
-function flags(t){return (isBlocked(t)?'<span class="blocked">Bloquée</span>':'')+(t.waitingFor&&t.status!=='done'?`<span class="waiting" title="En attente de : ${esc(t.waitingFor)}">⏳ ${esc(t.waitingFor)}</span>`:'')+(t.tags||[]).slice(0,2).map(x=>`<span class="tag">#${esc(x)}</span>`).join('');}
+function flags(t){return (t.recur&&RECUR_S[t.recur]&&t.status!=='done'?`<span class="tag recur" title="${esc(RECUR[t.recur])}">↻ ${RECUR_S[t.recur]}</span>`:'')+(isBlocked(t)?'<span class="blocked">Bloquée</span>':'')+(t.waitingFor&&t.status!=='done'?`<span class="waiting" title="En attente de : ${esc(t.waitingFor)}">⏳ ${esc(t.waitingFor)}</span>`:'')+(t.tags||[]).slice(0,2).map(x=>`<span class="tag">#${esc(x)}</span>`).join('');}
 function taskRow(t,stack){
   return `<div class="trow ${stack===true?'stack':''} ${t.status==='done'?'is-done':''}" data-act="open-task" data-id="${t.id}" tabindex="0" role="button">
     ${checkBtn(t)}<span class="ttl">${esc(t.title)}</span>
@@ -955,20 +1018,21 @@ function calGrid(compact,pf){
     const d=new Date(y,mo,1-off+i),ds=iso(d),out=d.getMonth()!==mo;
     const de=segsOn(evs,ds).sort((a,b)=>(isOp(a.e)?0:1)-(isOp(b.e)?0:1)||a.ext-b.ext||a.start.localeCompare(b.start));
     const dt=tasks.filter(t=>t.due===ds).sort((a,b)=>(a.status==='done')-(b.status==='done')||PRANK[a.priority]-PRANK[b.priority]);
+    const info=dayInfo(ds),wk=i%7===0&&calPrefs().weeks?`<span class="wk" title="Semaine ${isoWeek(d)}">S${isoWeek(d)}</span>`:'',fer=info.fer?`<span class="ferie-l" title="${esc(info.fer)}">Férié</span>`:'';
     const ml=mailsOn(evs,ds),mb=ml.length?`<span class="mails">${ml.slice(0,4).map(mailBadge).join('')}</span>`:'';
     if(compact){
       const key=de.filter(x=>isOp(x.e)||x.e.type==='deadline');
       const nt=dt.filter(t=>t.status!=='done');
       const lateDay=nt.length&&ds<T;
       const chipsC=key.slice(0,2).map(x=>{const e=x.e,first=x.start===ds||i%7===0;return `<button class="chip ev ${x.ext?'ext':isOp(e)?'op':'dl'}" style="--pc:${esc(e.type==='deadline'?'var(--danger)':evColor(e))}" data-act="open-event" data-id="${e.id}" title="${esc(segTitle(x))}">${first?esc(segTitle(x)):'&nbsp;'}</button>`;}).join('')+(key.length>2?`<span class="more">+${key.length-2}</span>`:'');
-      h+=`<div class="cell ${out?'out':''} ${i%7>=5?'wknd':''} ${ds===T?'today':''}" data-act="day" data-date="${ds}"><span class="dhead2"><span class="dn">${d.getDate()}</span>${nt.length?`<span class="tcount ${lateDay?'late':''}" title="${nt.length} tâche${nt.length>1?'s':''} à rendre${lateDay?' (en retard)':''}">${nt.length}<small> tâche${nt.length>1?'s':''}</small></span>`:''}<span class="sp"></span>${mb}</span>${chipsC}</div>`;
+      h+=`<div class="cell ${out?'out':''} ${i%7>=5?'wknd':''} ${ds===T?'today':''} ${info.fer?'ferie':''}" data-act="day" data-date="${ds}"><span class="dhead2">${wk}<span class="dn">${d.getDate()}</span>${fer}${nt.length?`<span class="tcount ${lateDay?'late':''}" title="${nt.length} tâche${nt.length>1?'s':''} à rendre${lateDay?' (en retard)':''}">${nt.length}<small> tâche${nt.length>1?'s':''}</small></span>`:''}<span class="sp"></span>${mb}</span>${chipsC}${vacHTML(info)}</div>`;
       continue;
     }
     const items=[
       ...de.map(x=>{const e=x.e,first=x.start===ds||i%7===0;const tm=x.ext?'':evTime(e);return `<button class="chip ev ${x.ext?'ext':isOp(e)?'op':''}" style="--pc:${esc(evColor(e))}" data-act="open-event" data-id="${e.id}" title="${esc(segTitle(x)+' · '+(x.start===x.end?dShort(x.start):dDay(x.start)+' → '+dDay(x.end)))}">${first?esc((tm?tm.slice(0,5)+' ':'')+segTitle(x)):'&nbsp;'}</button>`;}),
       ...dt.map(t=>`<button class="chip tk ${t.status==='done'?'done':''} ${t.status!=='done'&&ds<T?'late':''}" style="--dc:${pr(t.priority).c}" data-act="open-task" data-id="${t.id}" title="${esc(tkey(t)+' · '+t.title)}">${esc(t.title)}</button>`)
     ];
-    h+=`<div class="cell ${out?'out':''} ${i%7>=5?'wknd':''} ${ds===T?'today':''}" data-act="day" data-date="${ds}"><span class="dhead2"><span class="dn">${d.getDate()}</span>${mb}</span>${items.slice(0,max).join('')}${items.length>max?`<span class="more">+${items.length-max}</span>`:''}</div>`;
+    h+=`<div class="cell ${out?'out':''} ${i%7>=5?'wknd':''} ${ds===T?'today':''} ${info.fer?'ferie':''}" data-act="day" data-date="${ds}"><span class="dhead2">${wk}<span class="dn">${d.getDate()}</span>${info.fer?`<span class="ferie-l" title="${esc(info.fer)}">${esc(info.fer)}</span>`:''}<span class="sp"></span>${mb}</span>${items.slice(0,max).join('')}${items.length>max?`<span class="more">+${items.length-max}</span>`:''}${vacHTML(info)}</div>`;
   }
   return `<div class="cal ${compact?'compact':'big'}">${h}</div>`;
 }
@@ -999,7 +1063,7 @@ function viewDashboard(){
   </div>
   <div class="d-top">
     <section class="panel">${calSwitchHTML()}<div class="cal-head">${calNav('h3')}<span class="spacer"></span><button class="link" data-act="dcal-detail">Voir le détail</button></div><div class="cal-slide ${ui._dir}" id="dcal-slide">${calGrid(true,ui.dcal)}</div>
-      <div class="legend"><span><i class="lg op"></i>OP</span><span><i class="lg ext"></i>Prolongation</span><span><i class="lg dl"></i>Rendu</span><span><b class="mailb static">L</b> mail · <b class="mailb static k-R">R</b> relance</span><span><span class="tcount" style="padding:1px 6px">2<small> tâches</small></span> à rendre</span></div></section>
+      <div class="legend"><span><i class="lg op"></i>OP</span><span><i class="lg ext"></i>Prolongation</span><span><i class="lg dl"></i>Rendu</span><span class="vac" style="position:static"><i class="z-A">A</i><i class="z-B">B</i><i class="z-C">C</i></span> vacances<span><b class="mailb static">L</b> mail · <b class="mailb static k-R">R</b> relance</span><span><span class="tcount" style="padding:1px 6px">2<small> tâches</small></span> à rendre</span></div></section>
     <section class="panel"><h2>Cette semaine<span class="r"><a class="link" href="#taches">Toutes les tâches</a></span></h2>${weekHTML()}</section>
   </div>
   ${opBannersHTML()}
@@ -1016,9 +1080,10 @@ function weekHTML(){
     const es=segsOn(evs,ds).filter(x=>x.start===ds||i===0).sort((a,b)=>(a.e.startTime||'').localeCompare(b.e.startTime||''));
     const ms=mailsOn(evs,ds);
     const ts=open.filter(t=>t.due===ds).sort((a,b)=>PRANK[a.priority]-PRANK[b.priority]);
-    if(!es.length&&!ts.length&&!ms.length)continue;
+    if(!es.length&&!ts.length&&!ms.length&&!dayInfo(ds).fer)continue;
     const label=i===0?"Aujourd'hui":i===1?'Demain':cap(fWd.format(parse(ds)));
-    h+=`<div class="wday ${i===0?'is-today':''}"><h4>${label} <span class="dd">${dDay(ds)}</span></h4>${ms.map(mailLine).join('')}${es.map(evLine(ds)).join('')}${ts.slice(0,4).map(t=>miniRow(t,false)).join('')}${ts.length>4?`<button class="link more-link" data-act="day" data-date="${ds}">+ ${ts.length-4} autres</button>`:''}</div>`;
+    const inf=dayInfo(ds);
+    h+=`<div class="wday ${i===0?'is-today':''}"><h4>${label} <span class="dd">${dDay(ds)}</span>${inf.fer?`<span class="ferie-l">${esc(inf.fer)}</span>`:''}${inf.zones.length?`<span class="vac-tag">Vacances ${inf.zones.map(x=>x.z).join('·')}</span>`:''}</h4>${ms.map(mailLine).join('')}${es.map(evLine(ds)).join('')}${ts.slice(0,4).map(t=>miniRow(t,false)).join('')}${ts.length>4?`<button class="link more-link" data-act="day" data-date="${ds}">+ ${ts.length-4} autres</button>`:''}</div>`;
   }
   if(!h)h='<div class="empty-line">Rien de prévu dans les 7 prochains jours.</div>';
   return `<div class="week">${h}</div>`;
@@ -1135,8 +1200,9 @@ function tableRow(t){
     <button class="icon-btn trash" data-act="del-task" data-id="${t.id}" aria-label="Supprimer ${esc(tkey(t))}" title="Supprimer">${TRASH_SVG}</button>
   </div>`;
 }
+function searchEvents(q){q=norm(q);if(!q)return [];return list('events').filter(e=>{const p=S.projects[e.projectId];return norm([e.title,e.code,e.conditions,e.notes,p&&p.name,et(e.type).l].join(' ')).includes(q);}).sort((a,b)=>b.start.localeCompare(a.start));}
 function viewList(){
-  const f=ui.f,rows=sortTasks(filtered());
+  const f=ui.f,rows=sortTasks(filtered()),evHits=searchEvents(f.q);
   const active=f.project!=='all'||f.status!=='open'||f.priority!=='all'||f.when!=='all'||f.q;
   let body='';
   if(!rows.length)body=`<div class="empty-line" style="padding:16px">Aucune tâche ne correspond. <button class="chipbtn" data-act="new-task">+ Créer une tâche</button></div>`;
@@ -1160,6 +1226,7 @@ function viewList(){
     ${(()=>{const nd=filtered({ignoreStatus:true}).filter(t=>t.status==='done').length;return nd?`<button class="chipbtn" data-act="del-done">Supprimer les terminées (${nd})</button>`:'';})()}
     <span class="count">${rows.length} tâche${rows.length>1?'s':''}</span>
   </div>
+  ${evHits.length?`<div class="section-h" style="margin-top:4px"><h2 style="font-size:16px">OP & événements</h2><small>${evHits.length} résultat${evHits.length>1?'s':''}</small></div><div class="evlist" style="margin-bottom:16px">${evHits.slice(0,8).map(e=>`<div class="evrow" data-act="open-event" data-id="${e.id}" tabindex="0" role="button" style="--pc:${esc(evColor(e))}"><span class="sw"></span><span class="dt">${evRange(e)}</span><span class="t">${evIcon(e)}${esc(e.title)} <span class="etype t-${esc(e.type)}">${esc(et(e.type).l)}</span>${e.code?`<span class="code-chip light">${esc(e.code)}</span>`:''}</span><span class="side-meta">${projChip(e.projectId)}</span></div>`).join('')}</div>`:''}
   <div class="table"><div class="thead"><span></span><span>ID</span><span>Tâche</span><span>Projet</span><span>Statut</span><span>Priorité</span><span>Échéance</span><span></span></div>${body}</div>`;
 }
 
@@ -1179,7 +1246,7 @@ function viewKanban(){
 function viewCalendar(){
   return `<div class="cal-head">${calNav('h2')}<span class="spacer"></span>${projectFilterSelect()}</div>
   <div class="cal-wrap">${calGrid(false)}</div>
-  <div class="legend"><span>Bandeau plein : OP commerciale</span><span>Bandeau clair : événement, réunion, rendu</span><span>Point : priorité de la tâche</span><span>L : envoi du mail · R : relance</span><span>Clique sur un jour pour voir le détail ou ajouter</span></div>`;
+  <div class="legend"><span class="vac" style="position:static"><i class="z-A">A</i><i class="z-B">B</i><i class="z-C">C</i></span><span>vacances scolaires par zone</span><span>S48 : numéro de semaine</span><span>Bandeau plein : OP commerciale</span><span>Bandeau clair : événement, réunion, rendu</span><span>Point : priorité de la tâche</span><span>L : envoi du mail · R : relance</span><span>Clique sur un jour pour voir le détail ou ajouter</span></div>`;
 }
 
 /* ---- chronologie (Gantt) ---- */
@@ -1258,8 +1325,9 @@ function viewProjects(){
     <h3>${esc(p.name)}</h3>${p.desc?`<p>${esc(p.desc)}</p>`:''}
     <div class="stats"><span><b>${s.open}</b> ouvertes</span><span><b>${s.done}</b> terminées</span>${s.late?`<span style="color:var(--danger)"><b style="color:var(--danger)">${s.late}</b> en retard</span>`:''}${s.ops?`<span><b>${s.ops}</b> OP à venir</span>`:''}</div>
     <div class="pbar"><i style="width:${s.pct}%"></i></div>
+    ${(()=>{const ops=list('events').filter(x=>isOp(x)&&x.projectId===p.id&&effEnd(x)>=today()).sort((a,b)=>a.start.localeCompare(b.start));return ops.length?`<div class="pc-ops">${ops.slice(0,4).map(x=>`<button class="pc-op" style="--pc:${esc(evColor(x))}" data-act="open-event" data-id="${x.id}"><span class="t">${esc(evIcon(x)+x.title)}</span><span class="due">${dDay(x.start)}</span></button>`).join('')}${ops.length>4?`<span class="hint">+ ${ops.length-4} autres</span>`:''}</div>`:'';})()}
     <div class="due">${s.next?`Prochaine échéance : ${esc(s.next.title)} · ${rel(s.next.due)}`:'Aucune échéance ouverte'}</div>
-    <div class="acts"><button class="btn sm primary" data-act="goto-project" data-id="${p.id}">Voir les tâches</button><button class="btn sm" data-act="new-task" data-project="${p.id}">+ Tâche</button><span class="spacer"></span><button class="btn sm ghost" data-act="edit-project" data-id="${p.id}">Modifier</button></div>
+    <div class="acts"><button class="btn sm primary" data-act="goto-project" data-id="${p.id}">Voir les tâches</button><button class="btn sm" data-act="new-task" data-project="${p.id}">+ Tâche</button><button class="btn sm" data-act="new-event" data-type="op" data-project="${p.id}">+ OP</button><span class="spacer"></span><button class="btn sm ghost" data-act="edit-project" data-id="${p.id}">Modifier</button></div>
   </article>`;}).join('')}<button class="pcard add" data-act="new-project">+ Nouveau projet</button></div>`;
 }
 
@@ -1327,6 +1395,7 @@ function renderDrawer(focusTitle){
         <label for="d-status">Statut</label><select id="d-status" data-df="status" class="st-${t.status}" style="font-weight:600">${STATUSES.map(s=>opt(s.k,s.l,t.status)).join('')}</select>
         <label for="d-prio">Priorité</label><select id="d-prio" data-df="priority" class="prio-${t.priority}" style="font-weight:600">${PRIOS.map(p=>opt(p.k,p.l,t.priority)).join('')}</select>
         <span class="k">Dates</span><span class="dates"><label class="sr" for="d-start">Début</label><input type="date" id="d-start" data-df="start" value="${esc(t.start||'')}" title="Début"><span class="due">→</span><label class="sr" for="d-due">Échéance</label><input type="date" id="d-due" data-df="due" value="${esc(t.due||'')}" title="Échéance">${t.due?`<span class="due ${late?'late':''}">${t.status==='done'?'':rel(t.due)}</span>`:''}</span>
+        <label for="d-recur">Récurrence</label><span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="d-recur" data-df="recur">${opt('','Aucune',t.recur||'')}${Object.entries(RECUR).map(([k,l])=>opt(k,l,t.recur||'')).join('')}</select>${t.recur?`<span class="hint">À la fin, la suivante est créée toute seule${t.due?' pour le '+dShort(nextOccur(t.due,t.recur)):''}</span>`:''}</span>
         <label for="d-event">OP liée</label><span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="d-event" data-df="eventId">${evOpts}</select>${t.projectId&&!list('events').some(e=>isOp(e)&&(e.projectId||'')===t.projectId)?`<span class="hint">Aucune OP dans ce projet</span>`:''}</span>
         <label for="d-tags">Étiquettes</label><input id="d-tags" data-df="tags" value="${esc(t.tags.join(', '))}" placeholder="ex. mailing, seo">
         <span class="k">Bloquée par</span><span class="deps">${t.blockedBy.map(id=>{const b=S.tasks[id];return b?`<span class="dep ${b.status==='done'?'ok':''}">${esc(tkey(b)+' · '+b.title)}<button data-dep-del="${id}" aria-label="Retirer la dépendance">×</button></span>`:'';}).join('')}<label class="sr" for="d-dep">Ajouter une dépendance</label><select id="d-dep" style="max-width:260px">${depOpts}</select></span>
@@ -1390,6 +1459,7 @@ function eventModal(id,preset={}){
   const e=ex?clone(ex):{id:newId(),title:'',type:preset.type||'event',projectId:preset.projectId||(ui.f.project!=='all'&&ui.f.project!=='none'?ui.f.project:''),start:preset.start||T,end:preset.start||T,allDay:true,startTime:'09:00',endTime:'10:00',location:'',notes:'',createdAt:Date.now()};
   const ts=ex?evTasks(e.id).sort((a,b)=>(a.due||'9').localeCompare(b.due||'9')):[];
   const body=`<form id="ev-form" class="form" novalidate>
+    <div class="tabs" id="e-tabs" role="tablist" ${isOp(e)?'':'hidden'}><button type="button" role="tab" class="tab on" data-pane="info">Infos</button><button type="button" role="tab" class="tab" data-pane="mail">Mailing <span class="tc" id="tc-mail"></span></button><button type="button" role="tab" class="tab" data-pane="cl">Checklist <span class="tc" id="tc-cl"></span></button>${ex?`<button type="button" role="tab" class="tab" data-pane="tasks">Tâches liées <span class="tc" id="tc-tasks"></span></button>`:''}</div>
     <label class="field"><span>Nom</span><input id="e-title" required maxlength="200" value="${esc(e.title)}" placeholder="Ex. OP Black Friday, Réunion agence SEA…"></label>
     <div class="grid2">
       <div class="field"><label for="e-type" class="lbl-l">Type</label><select id="e-type">${allTypes().map(x=>opt(x.k,x.l,e.type)).join('')}</select>
@@ -1421,11 +1491,11 @@ function eventModal(id,preset={}){
         <label class="field"><span>Code promo</span><input id="e-code" value="${esc(e.code||'')}" placeholder="Ex. BF26" style="font-family:var(--font-mono);text-transform:uppercase"></label>
         <label class="field"><span>Conditions</span><textarea id="e-cond" rows="2" placeholder="Ex. -20 % dès 2 jours de location, hors forfaits">${esc(e.conditions||'')}</textarea></label>
       </div>
-      <div class="field" style="margin-top:12px"><span class="lbl">Mailing : jours d’envoi</span>
+      <div class="field" data-pane="mail"><span class="lbl">Mailing : jours d’envoi</span>
         <div id="e-mails" class="mail-list"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn sm" id="e-add-L"><b class="mailb static">L</b> Ajouter un envoi</button><button type="button" class="btn sm" id="e-add-R"><b class="mailb static k-R">R</b> Ajouter une relance</button></div>
       </div>
-      <div class="field" style="margin-top:14px"><span class="lbl">Checklist de l’OP <span id="e-cl-count"></span></span>
+      <div class="field" data-pane="cl"><span class="lbl">Checklist de l’OP <span id="e-cl-count"></span></span>
         <div id="e-cl" class="ocl"></div>
         <div class="add-line" style="flex-wrap:wrap"><label class="sr" for="e-cl-text">Nouvelle étape</label><input id="e-cl-text" placeholder="Nouvelle étape (ex. BAT validé), puis Entrée" style="flex:1;min-width:200px"><label class="sr" for="e-cl-date">Date</label><input type="date" id="e-cl-date" style="width:160px;flex:none"><button type="button" class="btn" id="e-cl-add">Ajouter</button></div>
         <div style="margin-top:6px"><label class="sr" for="e-cl-copy">Copier la checklist d’une autre OP</label><select id="e-cl-copy" class="inp" style="width:auto;font-size:13px"><option value="">Copier la checklist d’une autre OP…</option>${list('events').filter(x=>isOp(x)&&x.id!==e.id&&(x.checklist||[]).length).sort((a,b)=>b.start.localeCompare(a.start)).map(x=>`<option value="${x.id}">${esc(evIcon(x)+x.title)} (${dDay(x.start)}, ${x.checklist.length} étapes)</option>`).join('')}</select></div>
@@ -1433,18 +1503,24 @@ function eventModal(id,preset={}){
       </div>
     </div>
     <label class="field"><span>Notes</span><textarea id="e-notes" rows="3" placeholder="Canaux, cibles, contacts…">${esc(e.notes||'')}</textarea></label>
-    ${ex?`<div class="field"><span class="lbl">Tâches liées ${ts.length?`· ${ts.filter(t=>t.status==='done').length}/${ts.length} terminées`:''}</span>
+    ${ex?`<div class="field" data-pane="tasks"><span class="lbl">Tâches liées ${ts.length?`· ${ts.filter(t=>t.status==='done').length}/${ts.length} terminées`:''}</span>
       <div class="mini-list">${ts.map(taskRow).join('')||'<div class="empty-line">Aucune tâche liée.</div>'}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn sm" data-act="new-task" data-event="${e.id}">+ Tâche liée</button></div></div>`:''}
   </form>`;
   const foot=`${ex?'<button class="btn danger-ghost" id="e-del" type="button">Supprimer</button>':''}<span class="spacer"></span><button class="btn ghost" data-close type="button">Annuler</button><button class="btn primary" form="ev-form" type="submit">${ex?'Enregistrer':'Créer'}</button>`;
   openModal({title:ex?esc(evIcon(e)+e.title):isOp(e)?(e.type==='flash'?'Nouvelle vente flash':'Nouvelle OP commerciale'):'Nouvel événement',body,foot});
+  let pane='info';
+  const showPane=pn=>{pane=pn;const form=$('#ev-form'),opw=$('#e-op-w');
+    [...form.children].filter(x=>x.id!=='e-tabs'&&x.id!=='e-op-w').concat(opw?[...opw.children]:[]).forEach(x=>x.classList.toggle('pane-off',(x.dataset.pane||'info')!==pn));
+    mroot.querySelectorAll('#e-tabs .tab').forEach(b=>{b.classList.toggle('on',b.dataset.pane===pn);b.setAttribute('aria-selected',b.dataset.pane===pn);});};
+  const updTabs=()=>{const a=$('#tc-mail'),b=$('#tc-cl'),c=$('#tc-tasks');if(a)a.textContent=mails.length?`(${mails.filter(m=>m.sent).length}/${mails.length})`:'';if(b)b.textContent=ocl.length?`${ocl.filter(x=>x.done).length}/${ocl.length}`:'';if(c)c.textContent=ts.length?`(${ts.length})`:'';};
   let mails=(Array.isArray(e.mails)?e.mails:[]).map(m=>({...m}));
   let ocl=(Array.isArray(e.checklist)?e.checklist:[]).map(c=>({...c}));
+  setTimeout(()=>{if(!$('#e-tabs'))return;mroot.querySelectorAll('#e-tabs .tab').forEach(b=>b.onclick=()=>showPane(b.dataset.pane));showPane('info');updTabs();},0);
   const persistCl=()=>{if(ex&&S.events[e.id])save('events',{...S.events[e.id],checklist:ocl});};
   const drawCl=()=>{
     ocl.sort((a,b)=>(a.date||'9').localeCompare(b.date||'9'));
-    const dn=ocl.filter(c=>c.done).length;$('#e-cl-count').textContent=ocl.length?`· ${dn}/${ocl.length}`:'';
+    updTabsLater();const dn=ocl.filter(c=>c.done).length;$('#e-cl-count').textContent=ocl.length?`· ${dn}/${ocl.length}`:'';
     $('#e-cl').innerHTML=ocl.length?ocl.map((c,i)=>{const late=!c.done&&c.date&&c.date<T;return `<div class="ocl-row ${c.done?'done':''} ${late?'late':''}"><button type="button" class="check ${c.done?'on':''}" data-ocl-t="${i}" aria-label="${c.done?'Décocher':'Cocher'} ${esc(c.text)}">${c.done?CHECK_SVG:''}</button><label class="sr" for="e-ocl-x${i}">Étape</label><input id="e-ocl-x${i}" data-ocl="${i}" data-oclf="text" value="${esc(c.text)}"><label class="sr" for="e-ocl-d${i}">Date</label><input type="date" id="e-ocl-d${i}" data-ocl="${i}" data-oclf="date" value="${esc(c.date||'')}">${c.date&&!c.done?`<span class="due ${late?'late':''}">${rel(c.date)}</span>`:''}<button type="button" class="icon-btn" data-ocl-del="${i}" aria-label="Retirer ${esc(c.text)}">×</button></div>`;}).join(''):'<p class="hint">Aucune étape pour le moment.</p>';
   };
   const addCl=()=>{const t=$('#e-cl-text').value.trim();if(!t)return;ocl.push({id:newId(),text:t,date:$('#e-cl-date').value||'',done:false});$('#e-cl-text').value='';drawCl();persistCl();$('#e-cl-text').focus();};
@@ -1458,14 +1534,15 @@ function eventModal(id,preset={}){
     $('#e-nt-add').onclick=()=>{const name=$('#e-nt-name').value.trim();if(!name){$('#e-nt-name').focus();return;}const k='c_'+newId();const types=customTypes().concat({k,name,icon:$('#e-nt-icon').value.trim(),op:$('#e-nt-op').checked});saveTypes(types);
       const sel=$('#e-type');sel.innerHTML=allTypes().map(x=>opt(x.k,x.l,k)).join('');sel.value=k;sel.onchange();$('#e-newtype').hidden=true;$('#e-nt-name').value='';$('#e-nt-icon').value='';toast(`Type « ${name} » créé`);};
   },0);
-  const drawMails=()=>{mails.sort((a,b)=>(a.date||'').localeCompare(b.date||''));$('#e-mails').innerHTML=mails.length?mails.map((m,i)=>`<div class="mail-row"><b class="mailb static k-${m.kind}">${m.kind}</b><label class="sr" for="e-m-k${i}">Type d’envoi</label><select id="e-m-k${i}" data-mi="${i}" data-mf="kind">${opt('L','Envoi',m.kind)}${opt('R','Relance',m.kind)}</select><label class="sr" for="e-m-d${i}">Date</label><input type="date" id="e-m-d${i}" data-mi="${i}" data-mf="date" value="${esc(m.date||'')}"><label class="sr" for="e-m-t${i}">Heure</label><input type="time" id="e-m-t${i}" data-mi="${i}" data-mf="time" value="${esc(m.time||'')}"><button type="button" class="icon-btn" data-mdel="${i}" aria-label="Retirer cet envoi">×</button></div>`).join(''):'<p class="hint">Aucun envoi prévu.</p>';};
+  const updTabsLater=()=>setTimeout(updTabs,0);
+  const drawMails=()=>{mails.sort((a,b)=>(a.date||'').localeCompare(b.date||''));updTabsLater();$('#e-mails').innerHTML=mails.length?mails.map((m,i)=>`<div class="mail-row"><b class="mailb static k-${m.kind}">${m.kind}</b><label class="sr" for="e-m-k${i}">Type d’envoi</label><select id="e-m-k${i}" data-mi="${i}" data-mf="kind">${opt('L','Envoi',m.kind)}${opt('R','Relance',m.kind)}</select><label class="sr" for="e-m-d${i}">Date</label><input type="date" id="e-m-d${i}" data-mi="${i}" data-mf="date" value="${esc(m.date||'')}"><label class="sr" for="e-m-t${i}">Heure</label><input type="time" id="e-m-t${i}" data-mi="${i}" data-mf="time" value="${esc(m.time||'')}"><label class="inline-check" style="font-size:13px"><input type="checkbox" data-mi="${i}" data-mf="sent" ${m.sent?'checked':''}> Envoyé</label><button type="button" class="icon-btn" data-mdel="${i}" aria-label="Retirer cet envoi">×</button></div>`).join(''):'<p class="hint">Aucun envoi prévu.</p>';};
   drawMails();
   const addMail=k=>{const st0=$('#e-start').value||T,last=mails.filter(m=>m.date).map(m=>m.date).sort().pop();mails.push({id:newId(),kind:k,date:k==='L'?(mails.some(m=>m.kind==='L')&&last?addDays(last,1):st0):addDays(last||st0,2),time:''});drawMails();};
   $('#e-add-L').onclick=()=>addMail('L');$('#e-add-R').onclick=()=>addMail('R');
-  $('#e-mails').addEventListener('change',x=>{const t=x.target;if(t.dataset.mi==null)return;mails[+t.dataset.mi][t.dataset.mf]=t.value;if(t.dataset.mf!=='time')drawMails();});
+  $('#e-mails').addEventListener('change',x=>{const t=x.target;if(t.dataset.mi==null)return;mails[+t.dataset.mi][t.dataset.mf]=t.type==='checkbox'?t.checked:t.value;if(!['time','sent'].includes(t.dataset.mf))drawMails();updTabs();});
   $('#e-mails').addEventListener('click',x=>{const b=x.target.closest('[data-mdel]');if(b){mails.splice(+b.dataset.mdel,1);drawMails();}});
   $('#e-allday').onchange=()=>{$('#e-times').hidden=$('#e-allday').checked;};
-  $('#e-type').onchange=()=>{const op=isOpType($('#e-type').value);$('#e-op-w').hidden=!op;if(!ex)$('#m-title').textContent=$('#e-type').value==='flash'?'Nouvelle vente flash':$('#e-type').value==='op'?'Nouvelle OP commerciale':'Nouvel événement : '+et($('#e-type').value).l;$('#e-color-w').hidden=!op;$('#e-ext-w').hidden=!op;};
+  $('#e-type').onchange=()=>{const op=isOpType($('#e-type').value);$('#e-op-w').hidden=!op;$('#e-tabs').hidden=!op;if(!op)showPane('info');if(!ex)$('#m-title').textContent=$('#e-type').value==='flash'?'Nouvelle vente flash':$('#e-type').value==='op'?'Nouvelle OP commerciale':'Nouvel événement : '+et($('#e-type').value).l;$('#e-color-w').hidden=!op;$('#e-ext-w').hidden=!op;};
   mroot.querySelectorAll('input[name=e-ext]').forEach(x=>x.onchange=()=>{const yes=$('#e-ext-yes').checked;$('#e-ext-dates').hidden=!yes;if(yes&&!hasExt(e)){const en=$('#e-end').value||$('#e-start').value;if(en){$('#e-xs').value=addDays(en,1);$('#e-xe').value=addDays(en,7);}}});
   $('#e-xs').addEventListener('change',()=>{const a=$('#e-xs').value,b=$('#e-xe');if(a&&(!b.value||b.value<a))b.value=a;});
   $('#e-start').addEventListener('change',()=>{const s=$('#e-start').value,en=$('#e-end');if(s&&(!en.value||en.value<s))en.value=s;});
@@ -1483,7 +1560,7 @@ function eventModal(id,preset={}){
       if(xe<xs)xe=xs;if(xs<start)xs=start;ext={start:xs,end:xe};
     }
     e.ext=ext;
-    if(isOpType($('#e-type').value)){e.checklist=ocl;e.code=$('#e-code').value.trim().toUpperCase();e.conditions=$('#e-cond').value.trim();e.mails=mails.filter(m=>m.date).map(m=>({id:m.id||newId(),kind:m.kind==='R'?'R':'L',date:m.date,time:m.time||''}));}
+    if(isOpType($('#e-type').value)){e.checklist=ocl;e.code=$('#e-code').value.trim().toUpperCase();e.conditions=$('#e-cond').value.trim();e.mails=mails.filter(m=>m.date).map(m=>({id:m.id||newId(),kind:m.kind==='R'?'R':'L',date:m.date,time:m.time||'',sent:!!m.sent}));}
     e.color=isOpType($('#e-type').value)?((mroot.querySelector('input[name=e-color]:checked')||{}).value||''):'';
     Object.assign(e,{title,start,end,type:$('#e-type').value,projectId:$('#e-project').value,allDay:$('#e-allday').checked,startTime:$('#e-st').value,endTime:$('#e-et').value,location:$('#e-loc').value.trim(),notes:$('#e-notes').value.trim()});
     save('events',e);
@@ -1533,6 +1610,8 @@ function settingsModal(){
         <div class="types-list" id="s-types"></div>
         <div style="margin-top:6px"><button type="button" class="btn sm" id="s-type-add">+ Ajouter un type</button></div>
         <p class="hint">« Comme une OP » : le type a une bannière sur l’accueil, un code promo, des envois de mails, une checklist et une prolongation.</p></div>
+      <fieldset class="field"><legend>Calendrier</legend><div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px">${['A','B','C'].map(z=>`<label class="inline-check"><input type="checkbox" id="s-z${z}" ${calPrefs().zones.includes(z)?'checked':''}> Vacances zone ${z}</label>`).join('')}<label class="inline-check"><input type="checkbox" id="s-fer" ${calPrefs().feries?'checked':''}> Jours fériés</label><label class="inline-check"><input type="checkbox" id="s-wk" ${calPrefs().weeks?'checked':''}> Numéros de semaine</label></div>
+        <p class="hint">Vacances 2026-2027 officielles (zone A : Lyon, Bordeaux… ; B : Lille, Nantes… ; C : Paris, Créteil, Versailles, Toulouse, Montpellier).</p></fieldset>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn sm" id="s-export">Copier une sauvegarde (JSON)</button></div>
       <label class="field"><span>Restaurer une sauvegarde</span><textarea id="s-restore" rows="3" style="font:12px var(--font-mono)" placeholder="Colle ici une sauvegarde JSON copiée depuis l’autre version de l’outil"></textarea></label>
       <div><button type="button" class="btn sm" id="s-restore-go">Restaurer</button></div>
@@ -1547,7 +1626,7 @@ function settingsModal(){
   $('#s-types').addEventListener('click',x=>{const b=x.target.closest('[data-tdel]');if(b){types.splice(+b.dataset.tdel,1);drawTypes();}});
   $('#s-export').onclick=async()=>{try{await navigator.clipboard.writeText(JSON.stringify({projects:S.projects,tasks:S.tasks,events:S.events},null,1));toast('Sauvegarde copiée dans le presse-papiers');}catch(e){toast('Copie refusée par le navigateur');}};
   $('#s-restore-go').onclick=()=>{let d;try{d=JSON.parse($('#s-restore').value);}catch(e){toast('Ce texte n’est pas une sauvegarde valide');return;}let n=0;['projects','tasks','events','meta'].forEach(c=>{Object.values((d&&d[c])||{}).forEach(o=>{if(o&&o.id){const cur=S[c][o.id];if(!cur||(o.updatedAt||0)>(cur.updatedAt||0)){save(c,o);n++;}}});});hideModal();toast(n?`${n} élément(s) restauré(s)`:'Rien de nouveau dans cette sauvegarde');};
-  $('#s-save').onclick=()=>{const clean=types.map(t=>({k:t.k,name:String(t.name||'').trim()||'Sans nom',icon:String(t.icon||'').trim(),op:!!t.op}));const removed=customTypes().filter(t=>!clean.some(c=>c.k===t.k));list('events').filter(e=>removed.some(r=>r.k===e.type)).forEach(e=>save('events',{...e,type:'event'}));saveTypes(clean);hideModal();toast('Paramètres enregistrés');};
+  $('#s-save').onclick=()=>{const clean=types.map(t=>({k:t.k,name:String(t.name||'').trim()||'Sans nom',icon:String(t.icon||'').trim(),op:!!t.op}));const removed=customTypes().filter(t=>!clean.some(c=>c.k===t.k));list('events').filter(e=>removed.some(r=>r.k===e.type)).forEach(e=>save('events',{...e,type:'event'}));const cur=S.meta.settings||{id:'settings'};save('meta',{...cur,id:'settings',types:clean,cal:{zones:['A','B','C'].filter(z=>$('#s-z'+z).checked),feries:$('#s-fer').checked,weeks:$('#s-wk').checked}});hideModal();toast('Paramètres enregistrés');};
 }
 
 /* ---------- import du calendrier d'OP ---------- */
@@ -1872,7 +1951,7 @@ function seedDemo(){
   // missions courantes
   const c=(...a)=>a.map((x,i)=>({id:newId(),text:x.replace(/^\+/,''),done:x.startsWith('+')}));
   const com=(txt,dd)=>({id:newId(),text:txt,at:now-dd*864e5});
-  mk('Dashboard acquisition hebdo (Eulerian → Excel)','data','todo','important',1,{tags:['reporting'],checklist:c('Export Eulerian','Mise à jour des onglets SEO / SEA / affiliation','Envoi à l’équipe')});
+  mk('Dashboard acquisition hebdo (Eulerian → Excel)','data','todo','important',1,{recur:'weekly',tags:['reporting'],checklist:c('Export Eulerian','Mise à jour des onglets SEO / SEA / affiliation','Envoi à l’équipe')});
   mk('Brief agence SEA : campagnes de la saison','data','waiting','important',3,{tags:['sea'],waitingFor:'Validation du budget par la direction',waitingSince:d(-4),comments:[com('Relancé la direction pour la validation du budget.',1)]});
   mk('Optimiser les enchères Google Ads des stations','data','doing','normal',6,{start:-3,tags:['sea']});
   const seoA=mk('Relire les textes SEO : stations des Alpes du Nord','snow','review','normal',2,{start:-2,tags:['seo'],checklist:c('+Val Thorens','+Tignes','Les Arcs','La Plagne')});
@@ -1887,6 +1966,7 @@ function seedDemo(){
   mk('Landing page Saint-Valentin','netski','todo','normal',70);
   mk('Planning des posts du Calendrier de l’Avent','netski','doing','important',5,{start:-1,tags:['social'],checklist:c('+Semaine 1','Semaine 2','Semaine 3','Semaine 4')});
   mk('Point budget du T1 avec la direction','','todo','important',18);
+  mk('Reporting mensuel des leviers d’acquisition','data','todo','important',11,{recur:'monthly',tags:['reporting'],checklist:c('SEO','SEA','Affiliation','Mailing','Social')});
   mk('Bilan de l’OP Early booking','snow','doing','important',2,{eventId:ops[0].id,comments:[com('CA en hausse de 12 % par rapport à l’an dernier, à confirmer avec la finance.',1)]});
   mk('Traduire les CGV en néerlandais','snow','todo','low','');
   mk('Audit du tracking Eulerian après la mise en production','data','review','critical',0,{tags:['tracking']});
@@ -1960,7 +2040,7 @@ document.addEventListener('click',e=>{
     case 'open-task':if(inModal)hideModal();openTask(id);break;
     case 'new-task':if(inModal)hideModal();openTask(null,{due:a.dataset.due,status:a.dataset.status,projectId:a.dataset.project,eventId:a.dataset.event});break;
     case 'open-event':if(inModal)hideModal();if(drawer)closeDrawer();eventModal(id);break;
-    case 'new-event':if(inModal)hideModal();if(drawer)closeDrawer();eventModal(null,{start:a.dataset.start,type:a.dataset.type});break;
+    case 'new-event':if(inModal)hideModal();if(drawer)closeDrawer();eventModal(null,{start:a.dataset.start,type:a.dataset.type,projectId:a.dataset.project});break;
     case 'new-project':projectModal(null);break;
     case 'goto-rem':{const r=$('#rappels');r&&r.scrollIntoView({behavior:'smooth',block:'start'});break;}
     case 'rem-mail-sent':{const ev=S.events[id];if(ev){save('events',{...ev,mails:(ev.mails||[]).map(m=>m.id===a.dataset.mid?{...m,sent:true}:m)});toast('Envoi noté comme fait');}break;}
