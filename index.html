@@ -577,6 +577,32 @@ h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spaci
   .tl-label{width:150px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ---- récaps des agents ---- */
+.ag-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:22px}
+.ag-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.ag-head{display:flex;align-items:center;gap:10px}
+.ag-av{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font:700 15px var(--font-body);flex:none}
+.ag-av.skout{background:#14202E;color:#7FD3FF}.ag-av.inbox{background:#FF6B35;color:#14202E}.ag-av.echo{background:#2E2E2E;color:#fff}
+.ag-name{font-weight:700;font-size:15px}.ag-role{font-size:12.5px;color:var(--muted)}
+.ag-date{margin-left:auto;font-size:12.5px;color:var(--muted);text-align:right}
+.ag-new{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-size:11px;font-weight:700}
+.ag-sum{margin:0;font-size:14px;line-height:1.45}
+.ag-alert{margin:0;padding:8px 10px;border-radius:8px;background:var(--danger-soft);color:var(--ink);font-size:13.5px}
+.ag-items{margin:0;padding-left:18px;font-size:13.5px;line-height:1.45;color:var(--ink)}
+.ag-items li{margin:2px 0}
+.ag-foot{margin-top:auto;display:flex;gap:8px;align-items:center}
+.ag-empty{font-size:13.5px;color:var(--muted)}
+.ag-hist{width:100%;border-collapse:collapse;font-size:13.5px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.ag-hist th,.ag-hist td{padding:9px 12px;border-top:1px solid var(--line);text-align:left;vertical-align:top}
+.ag-hist th{background:var(--surface-2);font-size:12.5px;color:var(--muted);border-top:0}
+.ag-hist td.d{white-space:nowrap;color:var(--muted)}
+.ag-mini{display:flex;flex-direction:column;gap:2px}
+.ag-line{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 6px;border-top:1px solid var(--line)}
+.ag-line:first-child{border-top:0}
+.ag-line .ag-av{width:28px;height:28px;font-size:12.5px;border-radius:8px}
+.ag-line .s{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ag-line .s b{font-weight:600}
 </style>
 </head>
 <body>
@@ -624,7 +650,7 @@ const PRIOS=[{k:'critical',l:'Urgent & important',c:'var(--danger)'},{k:'urgent'
 const PRANK={critical:0,urgent:1,important:2,normal:3,low:4};
 const BASE_TYPES=[{k:'op',l:'OP commerciale',op:true},{k:'flash',l:'⚡ Vente flash',icon:'⚡',op:true},{k:'event',l:'Événement'},{k:'meeting',l:'Réunion'},{k:'deadline',l:'Rendu / deadline'},{k:'absence',l:'Absence / congé'}];
 const COLORS=['#2f54eb','#e8590c','#0ca678','#ae3ec9','#f59f00','#1098ad','#e03131','#5c7cfa','#2b8a3e','#d6336c'];
-const VIEWS={dashboard:'Tableau de bord',taches:'Tâches',kanban:'Kanban',calendrier:'Calendrier',chronologie:'Chronologie',evenements:'OP & événements',projets:'Projets'};
+const VIEWS={dashboard:'Tableau de bord',taches:'Tâches',kanban:'Kanban',calendrier:'Calendrier',chronologie:'Chronologie',evenements:'OP & événements',projets:'Projets',agents:'Agents'};
 const COLS=['projects','tasks','events','meta'];
 const DEMO=false;
 const BACKEND='supabase';
@@ -788,6 +814,53 @@ async function sbLoadAll(){
   sbFailed.forEach(f=>{if(f.obj)next[f.col][f.id]=f.obj;else delete next[f.col][f.id];});
   COLS.forEach(c=>S[c]=next[c]);
 }
+
+/* ---------- récaps des agents (Skout, Inbox, Echo) ---------- */
+const AGENTS=[{k:'Skout',c:'skout',l:'S',role:'Veille neige et stations pour le SEA'},{k:'Inbox',c:'inbox',l:'I',role:'Newsletters des concurrents'},{k:'Echo',c:'echo',l:'E',role:'Réputation Snowrental'}];
+let agReports=[],agMarking=false;
+function agSafeUrl(u){return typeof u==='string'&&/^https:\/\/claude\.ai\//.test(u)?u:'';}
+async function sbLoadAgents(){
+  const {data,error}=await sb.from('tk_agent_reports').select('id,agent,run_date,title,summary,items,alert,doc_url,is_read,created_at').order('run_date',{ascending:false}).order('created_at',{ascending:false}).limit(300);
+  if(error)throw error;
+  agReports=data||[];
+}
+function agRel(ds){const d=diff(ds,today());return d<=0?"Aujourd'hui":d===1?'Hier':d<=6?`Il y a ${d} j`:dShort(ds);}
+function agLatest(k){return agReports.find(r=>r.agent===k)||null;}
+function agUnread(){return agReports.filter(r=>!r.is_read).length;}
+async function agMarkRead(){
+  if(agMarking||!sb||!sbUser)return;const ids=agReports.filter(r=>!r.is_read).map(r=>r.id);if(!ids.length)return;
+  agMarking=true;
+  try{const {error}=await sb.from('tk_agent_reports').update({is_read:true}).in('id',ids);if(!error)agReports=agReports.map(r=>ids.includes(r.id)?{...r,is_read:true}:r);}catch(e){}
+  agMarking=false;renderSide();
+}
+function agAv(a){return `<span class="ag-av ${a.c}" aria-hidden="true">${a.l}</span>`;}
+function agItems(r){return Array.isArray(r.items)?r.items.filter(x=>typeof x==='string'&&x.trim()):[];}
+function agLink(r,label,cls){const u=agSafeUrl(r.doc_url);return u?`<a class="${cls||'btn sm'}" href="${esc(u)}" target="_blank" rel="noopener">${label||'Rapport complet'}</a>`:'';}
+function viewAgents(){
+  const cards=AGENTS.map(a=>{
+    const r=agLatest(a.k);
+    const head=`<div class="ag-head">${agAv(a)}<div><div class="ag-name">${a.k}</div><div class="ag-role">${esc(a.role)}</div></div>${r?`<div class="ag-date">${esc(agRel(r.run_date))}${!r.is_read?'<span class="ag-new">Nouveau</span>':''}</div>`:''}</div>`;
+    if(!r)return `<article class="ag-card">${head}<p class="ag-empty">Pas encore de récap. Il arrivera après son prochain passage.</p></article>`;
+    const it=agItems(r);
+    return `<article class="ag-card">${head}
+      <p class="ag-sum">${esc(r.summary)}</p>
+      ${r.alert?`<p class="ag-alert"><b>Alerte :</b> ${esc(r.alert)}</p>`:''}
+      ${it.length?`<ul class="ag-items">${it.slice(0,5).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}
+      <div class="ag-foot">${agLink(r)}<span class="ag-role">${esc(r.title)}</span></div></article>`;
+  }).join('');
+  const rows=agReports.map(r=>{const a=AGENTS.find(x=>x.k===r.agent)||AGENTS[0];return `<tr><td class="d">${esc(dShort(r.run_date))}</td><td>${a.k}</td><td>${esc(r.summary)}</td><td>${agLink(r,'Ouvrir','link')}</td></tr>`;}).join('');
+  if(agUnread())setTimeout(agMarkRead,1500);
+  return `<div class="ag-grid">${cards}</div>
+    <div class="section-h"><h2>Historique des récaps</h2></div>
+    ${agReports.length?`<table class="ag-hist"><thead><tr><th>Date</th><th>Agent</th><th>En bref</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="dash-empty">Aucun récap pour l’instant.</div>'}`;
+}
+function agentsDashHTML(){
+  const lim=addDays(today(),-7);
+  const latest=AGENTS.map(a=>({a,r:agLatest(a.k)})).filter(x=>x.r&&x.r.run_date>=lim);
+  const head=`<div class="section-h"><h2>Récaps des agents</h2><span class="r"><a class="btn sm" href="#agents">Tous les récaps</a></span></div>`;
+  if(!latest.length)return '';
+  return head+`<section class="panel ag-mini" style="margin-bottom:18px">${latest.map(({a,r})=>`<div class="ag-line">${agAv(a)}<span class="s"><b>${a.k}</b> · ${esc(agRel(r.run_date))}${!r.is_read?'<span class="ag-new">Nouveau</span>':''} — ${esc(r.alert?('Alerte : '+r.alert):r.summary)}</span>${agLink(r,'Lire','link')}</div>`).join('')}</section>`;
+}
 async function initSupa(){
   if(!window.supabase||!window.supabase.createClient){mode='login';ready=true;loginMsg='Impossible de charger Supabase : vérifie ta connexion internet puis recharge la page.';schedule();return;}
   sb=window.supabase.createClient(SUPA_URL,SUPA_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
@@ -799,6 +872,7 @@ async function initSupa(){
 async function startSupa(user){
   sbUser=user;mode='supa';ready=false;schedule();
   try{await sbLoadAll();netNote='';}catch(e){netNote='Impossible de lire tes données sur Supabase. Vérifie ta connexion puis recharge la page.';}
+  try{await sbLoadAgents();}catch(e){}
   ready=true;schedule();
   const ch=sb.channel('tk-'+user.id);
   COLS.forEach(c=>ch.on('postgres_changes',{event:'*',schema:'public',table:TABLE[c],filter:`user_id=eq.${user.id}`},p=>{
@@ -806,8 +880,9 @@ async function startSupa(user){
     else if(p.new&&p.new.id&&!sbFailed.has(c+'/'+p.new.id))S[c]={...S[c],[p.new.id]:p.new.data};
     schedule();
   }));
+  ch.on('postgres_changes',{event:'*',schema:'public',table:'tk_agent_reports',filter:`user_id=eq.${user.id}`},()=>{sbLoadAgents().then(schedule).catch(()=>{});});
   ch.subscribe();
-  window.addEventListener('focus',()=>{sbLoadAll().then(schedule).catch(()=>{});});
+  window.addEventListener('focus',()=>{sbLoadAll().then(schedule).catch(()=>{});sbLoadAgents().then(schedule).catch(()=>{});});
   window.addEventListener('online',sbRetry);
   setInterval(sbRetry,15000);
   window.addEventListener('beforeunload',e=>{if(sbFailed.size||sbPending){e.preventDefault();e.returnValue='';}});
@@ -970,7 +1045,7 @@ const inProj=x=>ui.f.project==='all'||(ui.f.project==='none'?!x.projectId:x.proj
 function renderSide(){
   const T=today(),late=openTasks().filter(t=>t.due&&t.due<T).length;
   const soonOp=list('events').filter(e=>isOp(e)&&evEnd(e)>=T&&e.start<=addDays(T,14)).length;
-  const nav=[['dashboard','Tableau de bord',late?`<span class="n alert" title="${late} en retard">${late} ⚠</span>`:''],['taches','Tâches',`<span class="n">${openTasks().length}</span>`],['kanban','Kanban',''],['calendrier','Calendrier',''],['chronologie','Chronologie',''],['evenements','OP & événements',soonOp?`<span class="n" title="OP dans les 14 jours">${soonOp}</span>`:''],['projets','Projets',`<span class="n">${list('projects').length}</span>`]];
+  const nav=[['dashboard','Tableau de bord',late?`<span class="n alert" title="${late} en retard">${late} ⚠</span>`:''],['taches','Tâches',`<span class="n">${openTasks().length}</span>`],['kanban','Kanban',''],['calendrier','Calendrier',''],['chronologie','Chronologie',''],['evenements','OP & événements',soonOp?`<span class="n" title="OP dans les 14 jours">${soonOp}</span>`:''],['projets','Projets',`<span class="n">${list('projects').length}</span>`],...(mode==='supa'?[['agents','Agents',agUnread()?`<span class="n" title="Nouveaux récaps">${agUnread()}</span>`:'']]:[])];
   $('#nav').innerHTML=nav.map(([k,l,n])=>`<a href="#${k}" class="${ui.view===k?'on':''}" ${ui.view===k?'aria-current="page"':''}>${l}${n}</a>`).join('');
   const ps=projSorted();
   $('#plist').innerHTML=ps.length?ps.map(p=>`<button data-act="goto-project" data-id="${p.id}" class="${ui.view==='taches'&&ui.f.project===p.id?'on':''}" style="--pc:${esc(p.color)}"><span class="dot"></span><span class="nm">${esc(p.name)}</span><span class="n">${openTasks().filter(t=>t.projectId===p.id).length}</span></button>`).join(''):`<span style="padding:0 10px;font-size:13px;color:var(--side-muted)">Aucun projet</span>`;
@@ -993,7 +1068,7 @@ function render(){
   if(mode==='login'){$('#page-title').textContent='Mes tickets';v.innerHTML=loginHTML();return;}
   if(!ready){v.innerHTML=`<div class="loader">Chargement de tes tickets…</div>`;return;}
   const empty=!list('projects').length&&!list('tasks').length&&!list('events').length;
-  const html=empty?welcomeHTML():({dashboard:viewDashboard,taches:viewList,kanban:viewKanban,calendrier:viewCalendar,chronologie:viewTimeline,evenements:viewEvents,projets:viewProjects}[ui.view])();
+  const html=empty?welcomeHTML():({dashboard:viewDashboard,taches:viewList,kanban:viewKanban,calendrier:viewCalendar,chronologie:viewTimeline,evenements:viewEvents,projets:viewProjects,agents:viewAgents}[ui.view])();
   const sc=v.scrollTop;
   const tl=$('.tl-wrap');const tls=tl?[tl.scrollLeft,tl.scrollTop]:null;
   v.innerHTML=noteHTML()+html;v.scrollTop=sc;
@@ -1074,6 +1149,7 @@ function viewDashboard(){
     <section class="panel"><h2>Cette semaine<span class="r"><a class="link" href="#taches">Toutes les tâches</a></span></h2>${weekHTML()}</section>
   </div>
   ${opBannersHTML()}
+  ${mode==='supa'?agentsDashHTML():''}
   <div class="d-bottom"><div>${dueBannersHTML()}</div>${remindersHTML()}</div>`;
 }
 function weekHTML(){
