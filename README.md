@@ -1,4 +1,4 @@
-# Mes tickets
+# Kairn (ex « Mes tickets »)
 
 Outil de ticketing perso (projets, tâches, OP commerciales, calendrier, chronologie), inspiré de Wrike.
 

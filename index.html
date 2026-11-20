@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mes tickets</title>
+<title>Kairn</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg viewBox='0 0 64 64' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='64' height='64' rx='16' fill='%232F54EB'/%3E%3Cellipse cx='32' cy='45.5' rx='18' ry='8' fill='%23FFFFFF'/%3E%3Cellipse cx='30.5' cy='31.8' rx='12.5' ry='6.6' fill='%23C9D5FF' transform='rotate(-5 30.5 31.8)'/%3E%3Cellipse cx='33' cy='20.6' rx='8' ry='5.4' fill='%23FF8A3D' transform='rotate(6 33 20.6)'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
@@ -50,6 +51,7 @@ h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spaci
 .app{display:grid;grid-template-columns:232px 1fr;height:100%}
 .side{background:var(--side-bg);color:var(--side-ink);display:flex;flex-direction:column;gap:20px;padding:18px 12px;overflow-y:auto}
 .brand{display:flex;align-items:center;gap:10px;padding:0 8px}
+.brand-logo{flex:none;border-radius:8px}
 .brand-mark{width:28px;height:28px;border-radius:8px;background:var(--accent);display:grid;place-items:center;font:700 13px var(--font-mono);color:#fff}
 .brand b{font:700 18px var(--font-display)}
 .nav{display:flex;flex-direction:column;gap:2px}
@@ -740,7 +742,7 @@ h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spaci
 <body>
 <div class="app">
   <aside class="side">
-    <div class="brand"><div class="brand-mark">T</div><b>Mes tickets</b></div>
+    <div class="brand"><svg class="brand-logo" viewBox="0 0 64 64" width="28" height="28" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#2F54EB"/><ellipse cx="32" cy="45.5" rx="18" ry="8" fill="#FFFFFF"/><ellipse cx="30.5" cy="31.8" rx="12.5" ry="6.6" fill="#C9D5FF" transform="rotate(-5 30.5 31.8)"/><ellipse cx="33" cy="20.6" rx="8" ry="5.4" fill="#FF8A3D" transform="rotate(6 33 20.6)"/></svg><b>Kairn</b></div>
     <nav class="nav" id="nav"></nav>
     <div class="projects">
       <h3>Projets <button data-act="new-project" aria-label="Nouveau projet" title="Nouveau projet">+</button></h3>
@@ -1240,7 +1242,7 @@ function render(){
   renderSide();
   $('#page-title').textContent=VIEWS[ui.view];
   const v=$('#view');
-  if(mode==='login'){$('#page-title').textContent='Mes tickets';v.innerHTML=loginHTML();return;}
+  if(mode==='login'){$('#page-title').textContent='Kairn';v.innerHTML=loginHTML();return;}
   if(!ready){v.innerHTML=`<div class="loader">Chargement de tes tickets…</div>`;return;}
   applyMainProject();
   const empty=!list('projects').length&&!list('tasks').length&&!list('events').length&&ui.view!=='idees';
