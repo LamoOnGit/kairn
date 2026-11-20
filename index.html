@@ -603,6 +603,121 @@ h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spaci
 .ag-line .ag-av{width:28px;height:28px;font-size:12.5px;border-radius:8px}
 .ag-line .s{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ag-line .s b{font-weight:600}
+/* ===== passe design ===== */
+.legend{align-items:center;gap:8px 18px}
+.legend>span{display:inline-flex;align-items:center;gap:6px}
+.legend .mailb,.legend .tcount{vertical-align:middle}
+.legend .tcount{padding:2px 7px}
+.legend .vac{margin:0}
+.legend .wk{margin:0}
+/* lignes « Cette semaine », rappels, détail du jour */
+.wev,.mrow{display:grid;grid-template-columns:20px minmax(0,1fr) auto;align-items:center;gap:10px;padding:6px 6px;border-radius:6px;font-size:14px;min-height:34px}
+.wev .ic,.mrow .ic{display:grid;place-items:center;width:20px}
+.wev .bar{width:4px;height:18px;border-radius:2px;background:var(--pc)}
+.wev .t,.mrow .mt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wev .t{font-weight:600}
+.wev .tm{font:500 12px var(--font-mono);color:var(--muted);margin-right:8px}
+.mrow .pdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:8px;vertical-align:1px}
+.wday{padding:10px 0 2px}
+.wday:first-child{padding-top:0}
+.wday h4{margin:0 0 2px;padding:0 6px;flex-wrap:wrap}
+.week{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 28px),transparent);padding-bottom:20px}
+/* cases du calendrier */
+.cell{gap:3px}
+.dhead2{display:flex;align-items:center;gap:5px;min-width:0;flex-wrap:nowrap;min-height:20px}
+.dhead2 .dn{flex:none}
+.dhead2 .tcount{margin-left:auto}
+.cfoot{display:flex;align-items:flex-end;gap:4px;margin-top:auto;padding-top:2px}
+.cfoot .sp{flex:1}
+.cfoot .mails{justify-content:flex-start}
+.vac{margin-top:0;align-self:auto}
+.cal.compact .tcount{padding:2px 6px;font-size:11px}
+.cal.compact .cell{container-type:inline-size}
+.cal.compact .wk{display:none}
+@container (max-width:72px){.tcount small{display:none}}
+.cal.compact .tcount{padding:2px 5px;gap:2px}
+.cal.compact .tcount small{font-size:9.5px}
+.cal.compact .dhead2{gap:3px}
+/* rappels */
+.d-bottom>div>.section-h{min-height:32px}
+.rem-panel{margin-top:0;padding-top:8px}
+.section-h .rem-count{margin-left:2px}
+.rem-add{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px}
+.rem-add #rem-text{grid-column:1/-1}
+.rem-add #rem-date{min-width:0}
+/* tableau des tâches */
+.thead,.table .trow{grid-template-columns:28px 56px minmax(220px,1fr) 150px 140px 168px 132px 32px}
+/* kanban */
+.kb{grid-template-columns:repeat(5,minmax(200px,1fr));min-width:1060px}
+.kcard{position:relative}
+.kcard .row:first-child{padding-right:26px}
+.kcard .k-del{position:absolute;top:6px;right:6px;margin:0}
+/* liste des OP */
+.evrow{grid-template-columns:6px 200px minmax(0,1fr) auto}
+.evrow .dt{line-height:1.4}
+/* projets */
+.pc-head{display:flex;align-items:flex-start;gap:8px}
+.pc-head h3{flex:1}
+.pc-head .icon-btn{display:grid;place-items:center;padding:5px;margin:-4px -6px 0 0}
+.pc-next{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;font-size:13px}
+.pc-next .lbl{grid-column:1/-1;font-size:11px}
+.pc-next-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcard .acts{gap:6px}
+.pcard .acts .btn{flex:1;justify-content:center;padding:6px 8px}
+/* panneau tâche */
+.dr-fields{align-items:start}
+.dr-fields>label,.dr-fields>.k{padding-top:9px}
+.dr-fields select,.dr-fields input,.dr-fields .wait-f input{max-width:340px;width:100%}
+.dr-fields .dates input{width:150px}
+.dr-fields>span{min-width:0}
+/* checklist d'OP */
+.ocl-row{display:grid;grid-template-columns:24px minmax(0,1fr) 150px 76px 30px;gap:8px;align-items:center}
+.ocl-row .due{text-align:right}
+.field .ocl-row input[type=date]{width:100%}
+/* import */
+.num-inp{width:64px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font:inherit}
+.imp-table select{padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--surface);font-size:13px}
+.imp-table th select{font-weight:500;text-transform:none;letter-spacing:0;color:var(--ink)}
+/* barre d'outils */
+.toolbar .chipbtn{align-self:center}
+@media (max-width:820px){
+  .side{flex:none;overflow-y:hidden;min-height:52px}
+  .top{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .top h1{flex-basis:100%;margin:0}
+  .top .search{flex:1;min-width:0}
+  .top .search input{width:100%}
+  .top .btn[data-act=import],.top .btn[data-act=new-event]:not([data-type]){display:none}
+  .top .btn{padding:7px 10px}
+  .toolbar select{flex:1 1 calc(50% - 8px);min-width:0}
+  .table{overflow:visible;border:0;background:transparent}
+  .thead{display:none}
+  .table .trow{grid-template-columns:28px minmax(0,1fr) minmax(0,1fr) 32px;grid-template-areas:"ck tt tt dl" ". pj pj pj" ". st pr du";min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;margin-bottom:8px;padding:10px 10px;row-gap:6px}
+  .table .trow>:nth-child(1){grid-area:ck}
+  .table .trow>:nth-child(2){display:none}
+  .table .trow>:nth-child(3){grid-area:tt;flex-wrap:wrap;white-space:normal}
+  .table .trow>:nth-child(3)>span:first-child{white-space:normal}
+  .table .trow>:nth-child(4){grid-area:pj}
+  .table .trow>:nth-child(5){grid-area:st}
+  .table .trow>:nth-child(6){grid-area:pr}
+  .table .trow>:nth-child(7){grid-area:du}
+  .table .trow>:nth-child(8){grid-area:dl}
+  .table .trow .isel{padding-left:0}
+  .group-h{min-width:0;border-radius:8px;margin:6px 0}
+  .evrow{grid-template-columns:6px minmax(0,1fr);row-gap:4px}
+  .evrow .sw{grid-row:1/4}
+  .evrow .dt,.evrow .t,.evrow .side-meta{grid-column:2}
+  .evrow .side-meta{flex-wrap:wrap}
+  .rem-add{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto}
+}
+@media (max-width:640px){
+  .banners.b2{grid-template-columns:1fr}
+  .cal.compact .tcount small,.cal.compact .vac,.cal.compact .wk{display:none}
+  .cal.compact .cell{min-height:64px;padding:4px}
+  .cal.compact .dhead2 .tcount{margin-left:0}
+  .dr-fields>label,.dr-fields>.k{padding-top:0}
+  .ocl-row{grid-template-columns:24px minmax(0,1fr) 30px}
+  .ocl-row input[type=date],.ocl-row .due{grid-column:2}
+}
 </style>
 </head>
 <body>
@@ -730,7 +845,7 @@ function vacHTML(info){if(!info.zones.length)return '';return `<span class="vac"
 const MAILK={L:'Mail de lancement',R:'Relance'};
 const mailsOn=(evs,ds)=>evs.flatMap(e=>(Array.isArray(e.mails)?e.mails:[]).filter(m=>m&&m.date===ds).map(m=>({e,m}))).sort((a,b)=>a.m.kind.localeCompare(b.m.kind));
 const mailBadge=x=>`<button class="mailb k-${esc(x.m.kind)} ${x.m.sent?'sent':''}" style="--pc:${esc(evColor(x.e))}" data-act="open-event" data-id="${x.e.id}" title="${esc(MAILK[x.m.kind]+' · '+evIcon(x.e)+x.e.title+(x.m.time?' · '+x.m.time:'')+(x.m.sent?' · envoyé':''))}" aria-label="${esc(MAILK[x.m.kind]+' : '+x.e.title)}">${x.m.kind==='R'?'R':'L'}</button>`;
-function mailLine(x){const e=x.e;return `<div class="wev" data-act="open-event" data-id="${e.id}" tabindex="0" role="button" style="--pc:${esc(evColor(e))}"><span class="mailb k-${esc(x.m.kind)} static ${x.m.sent?'sent':''}">${x.m.kind}</span><span class="tm">${esc(x.m.time||'')}</span><span class="t ${x.m.sent?'is-sent':''}">${MAILK[x.m.kind]} · ${esc(evIcon(e)+e.title)}</span>${x.m.sent?'<span class="sent-tag">✓ envoyé</span>':''}</div>`;}
+function mailLine(x){const e=x.e;return `<div class="wev" data-act="open-event" data-id="${e.id}" tabindex="0" role="button" style="--pc:${esc(evColor(e))}"><span class="ic"><span class="mailb k-${esc(x.m.kind)} static ${x.m.sent?'sent':''}">${x.m.kind}</span></span><span class="t ${x.m.sent?'is-sent':''}">${x.m.time?`<span class="tm">${esc(x.m.time)}</span>`:''}${MAILK[x.m.kind]} · ${esc(evIcon(e)+e.title)}</span>${x.m.sent?'<span class="sent-tag">✓ envoyé</span>':''}</div>`;}
 function evColor(e){
   if(e.color)return e.color;
   const base=pColor(e.projectId);if(!isOp(e))return base;
@@ -738,6 +853,7 @@ function evColor(e){
   const i=sib.findIndex(x=>x.id===e.id);return shade(base,i<0?sib.length:i);
 }
 const TRASH_SVG='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+const EDIT_SVG='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4"/></svg>';
 const CHECK_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
 function rel(s){
   const d=diff(today(),s);
@@ -1105,7 +1221,7 @@ function calGrid(compact,pf){
       const nt=dt.filter(t=>t.status!=='done');
       const lateDay=nt.length&&ds<T;
       const chipsC=key.slice(0,2).map(x=>{const e=x.e,first=x.start===ds||i%7===0;return `<button class="chip ${isOp(e)?'ev '+(x.ext?'ext':'op'):'evs'}" style="--pc:${esc(e.type==='deadline'?'var(--danger)':evColor(e))}" data-act="open-event" data-id="${e.id}" title="${esc(segTitle(x))}">${first?esc(segTitle(x)):'&nbsp;'}</button>`;}).join('')+(key.length>2?`<span class="more">+${key.length-2}</span>`:'');
-      h+=`<div class="cell ${out?'out':''} ${i%7>=5?'wknd':''} ${ds===T?'today':''} ${info.fer?'ferie':''}" data-act="day" data-date="${ds}"><span class="dhead2">${wk}<span class="dn">${d.getDate()}</span>${fer}${nt.length?`<span class="tcount ${lateDay?'late':''}" title="${nt.length} tâche${nt.length>1?'s':''} à rendre${lateDay?' (en retard)':''}">${nt.length}<small> tâche${nt.length>1?'s':''}</small></span>`:''}<span class="sp"></span>${mb}</span>${chipsC}${vacHTML(info)}</div>`;
+      h+=`<div class="cell ${out?'out':''} ${i%7>=5?'wknd':''} ${ds===T?'today':''} ${info.fer?'ferie':''}" data-act="day" data-date="${ds}"><span class="dhead2">${wk}<span class="dn">${d.getDate()}</span>${fer}${nt.length?`<span class="tcount ${lateDay?'late':''}" title="${nt.length} tâche${nt.length>1?'s':''} à rendre${lateDay?' (en retard)':''}">${nt.length}<small> tâche${nt.length>1?'s':''}</small></span>`:''}</span>${chipsC}${(mb||info.zones.length)?`<span class="cfoot">${mb}<span class="sp"></span>${vacHTML(info)}</span>`:''}</div>`;
       continue;
     }
     const items=[
@@ -1114,7 +1230,7 @@ function calGrid(compact,pf){
         return `<button class="chip ev ${x.ext?'ext':isOp(e)?'op':''}" style="--pc:${esc(evColor(e))}" data-act="open-event" data-id="${e.id}" title="${esc(segTitle(x)+' · '+(x.start===x.end?dShort(x.start):dDay(x.start)+' → '+dDay(x.end)))}">${first?esc((tm?tm.slice(0,5)+' ':'')+segTitle(x)):'&nbsp;'}</button>`;}),
       ...dt.map(t=>`<button class="chip tk ${t.status==='done'?'done':''} ${t.status!=='done'&&ds<T?'late':''}" style="--dc:${pr(t.priority).c}" data-act="open-task" data-id="${t.id}" title="${esc(tkey(t)+' · '+t.title)}">${esc(t.title)}</button>`)
     ];
-    h+=`<div class="cell ${out?'out':''} ${i%7>=5?'wknd':''} ${ds===T?'today':''} ${info.fer?'ferie':''}" data-act="day" data-date="${ds}"><span class="dhead2">${wk}<span class="dn">${d.getDate()}</span>${info.fer?`<span class="ferie-l" title="${esc(info.fer)}">${esc(info.fer)}</span>`:''}<span class="sp"></span>${mb}</span>${items.slice(0,max).join('')}${items.length>max?`<span class="more">+${items.length-max}</span>`:''}${vacHTML(info)}</div>`;
+    h+=`<div class="cell ${out?'out':''} ${i%7>=5?'wknd':''} ${ds===T?'today':''} ${info.fer?'ferie':''}" data-act="day" data-date="${ds}"><span class="dhead2">${wk}<span class="dn">${d.getDate()}</span>${info.fer?`<span class="ferie-l" title="${esc(info.fer)}">${esc(info.fer)}</span>`:''}</span>${items.slice(0,max).join('')}${items.length>max?`<span class="more">+${items.length-max}</span>`:''}${(mb||info.zones.length)?`<span class="cfoot">${mb}<span class="sp"></span>${vacHTML(info)}</span>`:''}</div>`;
   }
   return `<div class="cal ${compact?'compact':'big'}">${h}</div>`;
 }
@@ -1130,10 +1246,10 @@ function calSwitchHTML(){
   return `<div class="cal-switch"><button class="icon-btn" data-act="dcal-step" data-dir="-1" aria-label="Calendrier précédent">‹</button><div class="cal-tabs" role="tablist" aria-label="Calendrier affiché">${tabs}</div><button class="icon-btn" data-act="dcal-step" data-dir="1" aria-label="Calendrier suivant">›</button></div>`;
 }
 function dcalGo(id,dir){if(id===ui.dcal)return;ui._dir=dir>0?'from-right':'from-left';ui.dcal=id;schedule();}
-function evLine(ds){return x=>{const e=x.e;return `<div class="wev" data-act="open-event" data-id="${e.id}" tabindex="0" role="button" style="--pc:${esc(evColor(e))}"><span class="bar ${x.ext?'ext':''}"></span><span class="tm">${!x.ext&&evTime(e)?esc(evTime(e).slice(0,5)):x.start===ds?'':'suite'}</span><span class="t">${esc(segTitle(x))}</span>${x.ext?'<span class="ext-tag">Prolongation</span>':`<span class="etype t-${esc(e.type)}">${et(e.type).l}</span>`}</div>`;};}
+function evLine(ds){return x=>{const e=x.e,tm=!x.ext&&evTime(e)?evTime(e).slice(0,5):x.start===ds?'':'suite';return `<div class="wev" data-act="open-event" data-id="${e.id}" tabindex="0" role="button" style="--pc:${esc(evColor(e))}"><span class="ic"><span class="bar ${x.ext?'ext':''}"></span></span><span class="t">${tm?`<span class="tm">${esc(tm)}</span>`:''}${esc(segTitle(x))}</span>${x.ext?'<span class="ext-tag">Prolongation</span>':`<span class="etype t-${esc(e.type)}">${esc(et(e.type).l)}</span>`}</div>`;};}
 function miniRow(t,showDue){
   const late=t.due&&t.due<today()&&t.status!=='done';
-  return `<div class="mrow" data-act="open-task" data-id="${t.id}" tabindex="0" role="button">${checkBtn(t)}<span class="pdot" style="background:${pr(t.priority).c}" title="${esc(pr(t.priority).l)}"></span><span class="mt">${esc(t.title)}</span>${showDue&&t.due?`<span class="due ${late?'late':''}">${rel(t.due)}</span>`:''}</div>`;
+  return `<div class="mrow" data-act="open-task" data-id="${t.id}" tabindex="0" role="button"><span class="ic">${checkBtn(t)}</span><span class="mt"><span class="pdot" style="background:${pr(t.priority).c}" title="${esc(pr(t.priority).l)}"></span>${esc(t.title)}</span>${showDue&&t.due?`<span class="due ${late?'late':''}">${rel(t.due)}</span>`:''}</div>`;
 }
 function viewDashboard(){
   const T=today(),in7=addDays(T,7),open=openTasks();
@@ -1145,7 +1261,7 @@ function viewDashboard(){
   </div>
   <div class="d-top">
     <section class="panel">${calSwitchHTML()}<div class="cal-head">${calNav('h3')}<span class="spacer"></span><button class="link" data-act="dcal-detail">Voir le détail</button></div><div class="cal-slide ${ui._dir}" id="dcal-slide">${calGrid(true,ui.dcal)}</div>
-      <div class="legend"><span><i class="lg op"></i>OP</span><span><i class="lg ext"></i>Prolongation</span><span><i class="lg dl"></i>Rendu</span><span class="vac" style="position:static"><i class="z-A">A</i><i class="z-B">B</i><i class="z-C">C</i></span> vacances<span><b class="mailb static">L</b> mail · <b class="mailb static k-R">R</b> relance</span><span><span class="tcount" style="padding:1px 6px">2<small> tâches</small></span> à rendre</span></div></section>
+      <div class="legend"><span><i class="lg op"></i>OP</span><span><i class="lg ext"></i>Prolongation</span><span><i class="lg dl"></i>Rendu</span><span><span class="vac"><i class="z-A">A</i><i class="z-B">B</i><i class="z-C">C</i></span>Vacances</span><span><b class="mailb static">L</b>Mail</span><span><b class="mailb static k-R">R</b>Relance</span><span><span class="tcount">2</span>Tâches à rendre</span></div></section>
     <section class="panel"><h2>Cette semaine<span class="r"><a class="link" href="#taches">Toutes les tâches</a></span></h2>${weekHTML()}</section>
   </div>
   ${opBannersHTML()}
@@ -1215,11 +1331,11 @@ function remindersHTML(){
     return '';};
   const mrow=r=>`<div class="rem ${r.date>T?'later':''}"><button class="check" data-act="rem-done" data-id="${esc(r.id)}" aria-label="Terminer le rappel ${esc(r.text)}"></button><span class="rem-t static">${esc(r.text)}</span><span class="due ${r.date<T?'late':''}">${r.date===T?(r.time||'aujourd’hui'):r.date<T?rel(r.date):dShort(r.date)+(r.time?' '+r.time:'')}</span><button class="icon-btn" data-act="rem-del" data-id="${esc(r.id)}" aria-label="Supprimer le rappel" style="font-size:16px">×</button></div>`;
   const n=auto.length+now.length;
-  return `<section class="panel rem-panel" id="rappels"><h2>Rappels ${n?`<span class="rem-count">${n}</span>`:''}</h2>
+  return `<div><div class="section-h" id="rappels"><h2>Rappels</h2>${n?`<span class="rem-count">${n}</span>`:''}</div><section class="panel rem-panel">
     <div class="rem-list">${auto.map(row).join('')}${now.map(mrow).join('')}${!n?'<div class="empty-line">Rien à te rappeler aujourd’hui.</div>':''}</div>
     ${later.length?`<div class="lbl" style="margin:10px 0 2px">À venir</div><div class="rem-list">${later.slice(0,4).map(mrow).join('')}</div>`:''}
     <form class="rem-add" id="rem-form"><label class="sr" for="rem-text">Nouveau rappel</label><input id="rem-text" placeholder="Me rappeler de…" maxlength="160"><label class="sr" for="rem-date">Date</label><input type="date" id="rem-date" value="${T}"><label class="sr" for="rem-time">Heure</label><input type="time" id="rem-time"><button class="btn sm primary" type="submit">Ajouter</button></form>
-  </section>`;
+  </section></div>`;
 }
 
 function dueBannersHTML(){
@@ -1329,7 +1445,7 @@ function viewKanban(){
 function viewCalendar(){
   return `<div class="cal-head">${calNav('h2')}<span class="spacer"></span>${projectFilterSelect()}</div>
   <div class="cal-wrap">${calGrid(false)}</div>
-  <div class="legend"><span class="vac" style="position:static"><i class="z-A">A</i><i class="z-B">B</i><i class="z-C">C</i></span><span>vacances scolaires par zone</span><span>S48 : numéro de semaine</span><span>Bandeau plein : OP commerciale</span><span>Ligne fine : événement, réunion, rendu</span><span>Point : priorité de la tâche</span><span>L : envoi du mail · R : relance</span><span>Clique sur un jour pour voir le détail ou ajouter</span></div>`;
+  <div class="legend"><span><span class="vac"><i class="z-A">A</i><i class="z-B">B</i><i class="z-C">C</i></span>Vacances scolaires par zone</span><span><span class="wk">S48</span>Numéro de semaine</span><span>Bandeau plein : OP commerciale</span><span>Ligne fine : événement, réunion, rendu</span><span>Point : priorité de la tâche</span><span>L : envoi du mail · R : relance</span><span>Clique sur un jour pour voir le détail ou ajouter</span></div>`;
 }
 
 /* ---- chronologie (Gantt) ---- */
@@ -1407,12 +1523,12 @@ function viewEvents(){
 /* ---- projets ---- */
 function viewProjects(){
   return `<div class="pgrid">${projSorted().map(p=>{const s=projStats(p);return `<article class="pcard" style="--pc:${esc(p.color)}">
-    <h3>${esc(p.name)}</h3>${p.desc?`<p>${esc(p.desc)}</p>`:''}
-    <div class="stats"><span><b>${s.open}</b> ouvertes</span><span><b>${s.done}</b> terminées</span>${s.late?`<span style="color:var(--danger)"><b style="color:var(--danger)">${s.late}</b> en retard</span>`:''}${s.ops?`<span><b>${s.ops}</b> OP à venir</span>`:''}</div>
+    <div class="pc-head"><h3>${esc(p.name)}</h3><button class="icon-btn" data-act="edit-project" data-id="${p.id}" aria-label="Modifier le projet ${esc(p.name)}" title="Modifier">${EDIT_SVG}</button></div>${p.desc?`<p>${esc(p.desc)}</p>`:''}
+    <div class="stats"><span><b>${s.open}</b> ouverte${s.open>1?'s':''}</span><span><b>${s.done}</b> terminée${s.done>1?'s':''}</span>${s.late?`<span style="color:var(--danger)"><b style="color:var(--danger)">${s.late}</b> en retard</span>`:''}${s.ops?`<span><b>${s.ops}</b> OP à venir</span>`:''}</div>
     <div class="pbar"><i style="width:${s.pct}%"></i></div>
     ${(()=>{const ops=list('events').filter(x=>isOp(x)&&x.projectId===p.id&&effEnd(x)>=today()).sort((a,b)=>a.start.localeCompare(b.start));return ops.length?`<div class="pc-ops">${ops.slice(0,4).map(x=>`<button class="pc-op" style="--pc:${esc(evColor(x))}" data-act="open-event" data-id="${x.id}"><span class="t">${esc(evIcon(x)+x.title)}</span><span class="due">${dDay(x.start)}</span></button>`).join('')}${ops.length>4?`<span class="hint">+ ${ops.length-4} autres</span>`:''}</div>`:'';})()}
-    <div class="due">${s.next?`Prochaine échéance : ${esc(s.next.title)} · ${rel(s.next.due)}`:'Aucune échéance ouverte'}</div>
-    <div class="acts"><button class="btn sm primary" data-act="goto-project" data-id="${p.id}">Voir les tâches</button><button class="btn sm" data-act="new-task" data-project="${p.id}">+ Tâche</button><button class="btn sm" data-act="new-event" data-type="op" data-project="${p.id}">+ OP</button><span class="spacer"></span><button class="btn sm ghost" data-act="edit-project" data-id="${p.id}">Modifier</button></div>
+    <div class="pc-next">${s.next?`<span class="lbl">Prochaine échéance</span><span class="pc-next-t">${esc(s.next.title)}</span><span class="due ${s.next.due<today()?'late':''}">${rel(s.next.due)}</span>`:'<span class="hint">Aucune échéance ouverte</span>'}</div>
+    <div class="acts"><button class="btn sm primary" data-act="goto-project" data-id="${p.id}">Tâches</button><button class="btn sm" data-act="new-task" data-project="${p.id}">+ Tâche</button><button class="btn sm" data-act="new-event" data-type="op" data-project="${p.id}">+ OP</button></div>
   </article>`;}).join('')}<button class="pcard add" data-act="new-project">+ Nouveau projet</button></div>`;
 }
 
@@ -1606,7 +1722,7 @@ function eventModal(id,preset={}){
   const drawCl=()=>{
     ocl.sort((a,b)=>(a.date||'9').localeCompare(b.date||'9'));
     updTabsLater();const dn=ocl.filter(c=>c.done).length;$('#e-cl-count').textContent=ocl.length?`· ${dn}/${ocl.length}`:'';
-    $('#e-cl').innerHTML=ocl.length?ocl.map((c,i)=>{const late=!c.done&&c.date&&c.date<T;return `<div class="ocl-row ${c.done?'done':''} ${late?'late':''}"><button type="button" class="check ${c.done?'on':''}" data-ocl-t="${i}" aria-label="${c.done?'Décocher':'Cocher'} ${esc(c.text)}">${c.done?CHECK_SVG:''}</button><label class="sr" for="e-ocl-x${i}">Étape</label><input id="e-ocl-x${i}" data-ocl="${i}" data-oclf="text" value="${esc(c.text)}"><label class="sr" for="e-ocl-d${i}">Date</label><input type="date" id="e-ocl-d${i}" data-ocl="${i}" data-oclf="date" value="${esc(c.date||'')}">${c.date&&!c.done?`<span class="due ${late?'late':''}">${rel(c.date)}</span>`:''}<button type="button" class="icon-btn" data-ocl-del="${i}" aria-label="Retirer ${esc(c.text)}">×</button></div>`;}).join(''):'<p class="hint">Aucune étape pour le moment.</p>';
+    $('#e-cl').innerHTML=ocl.length?ocl.map((c,i)=>{const late=!c.done&&c.date&&c.date<T;return `<div class="ocl-row ${c.done?'done':''} ${late?'late':''}"><button type="button" class="check ${c.done?'on':''}" data-ocl-t="${i}" aria-label="${c.done?'Décocher':'Cocher'} ${esc(c.text)}">${c.done?CHECK_SVG:''}</button><label class="sr" for="e-ocl-x${i}">Étape</label><input id="e-ocl-x${i}" data-ocl="${i}" data-oclf="text" value="${esc(c.text)}"><label class="sr" for="e-ocl-d${i}">Date</label><input type="date" id="e-ocl-d${i}" data-ocl="${i}" data-oclf="date" value="${esc(c.date||'')}"><span class="due ${late?'late':''}">${c.date&&!c.done?rel(c.date):''}</span><button type="button" class="icon-btn" data-ocl-del="${i}" aria-label="Retirer ${esc(c.text)}">×</button></div>`;}).join(''):'<p class="hint">Aucune étape pour le moment.</p>';
   };
   const addCl=()=>{const t=$('#e-cl-text').value.trim();if(!t)return;ocl.push({id:newId(),text:t,date:$('#e-cl-date').value||'',done:false});$('#e-cl-text').value='';drawCl();persistCl();$('#e-cl-text').focus();};
   setTimeout(()=>{if(!$('#e-cl'))return;drawCl();
@@ -1682,7 +1798,7 @@ function dayModal(ds){
   const evs=segsOn(list('events'),ds),ts=list('tasks').filter(t=>t.due===ds),ms=mailsOn(list('events'),ds);
   openModal({title:esc(cap(dLong(ds))),
     body:`${ms.length?`<div class="lbl" style="margin-bottom:4px">Mailing</div>${ms.map(mailLine).join('')}`:''}${evs.length?`<div class="lbl" style="margin:${ms.length?12:0}px 0 4px">Événements</div>${evs.map(evLine(ds)).join('')}`:''}
-      <div class="lbl" style="margin:12px 0 4px">Tâches à rendre</div>${ts.map(taskRow).join('')||'<div class="empty-line">Aucune tâche ce jour-là.</div>'}`,
+      <div class="lbl" style="margin:12px 0 4px">Tâches à rendre</div>${ts.map(t=>miniRow(t,false)).join('')||'<div class="empty-line">Aucune tâche ce jour-là.</div>'}`,
     foot:`<span class="spacer"></span><button class="btn" data-act="new-event" data-start="${ds}">+ Événement</button><button class="btn" data-act="new-event" data-start="${ds}" data-type="op">+ OP</button><button class="btn primary" data-act="new-task" data-due="${ds}">+ Tâche</button>`});
 }
 
@@ -1928,7 +2044,7 @@ function importModal(){
     let h=`<div class="toolbar" style="margin:0">`;
     if(I.sheets.length>1)h+=`<label class="sr" for="imp-sheet">Onglet</label><select id="imp-sheet">${I.sheets.map((s,i)=>opt(String(i),'Onglet : '+s.name,String(I.si))).join('')}</select>`;
     h+=`<label class="sr" for="imp-mode">Format</label><select id="imp-mode">${opt('table','Format : une OP par ligne',I.mode)}${opt('grid','Format : planning (dates en colonnes)',I.mode)}</select>`;
-    if(I.mode==='table')h+=`<label class="inline-check">Ligne d’en-tête <input type="number" id="imp-hi" min="1" max="${I.rows.length}" value="${I.hi+1}" class="inp" style="width:72px;padding:5px 8px"></label>`;
+    if(I.mode==='table')h+=`<label class="inline-check">Ligne d’en-tête <input type="number" id="imp-hi" min="1" max="${I.rows.length}" value="${I.hi+1}" class="num-inp"></label>`;
     else h+=`<label class="inline-check"><input type="checkbox" id="imp-label" ${I.labelProj?'checked':''}> La 1re colonne de chaque ligne est l’enseigne</label>`;
     h+=`</div>`;
     if(I.mode==='table'){
