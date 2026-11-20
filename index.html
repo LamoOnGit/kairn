@@ -718,6 +718,23 @@ h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spaci
   .ocl-row{grid-template-columns:24px minmax(0,1fr) 30px}
   .ocl-row input[type=date],.ocl-row .due{grid-column:2}
 }
+.idea-add{display:grid;grid-template-columns:minmax(0,1fr) 200px auto;gap:8px;margin-bottom:14px}
+.idea-add input,.idea-add select{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:15px;min-width:0}
+.idea-add input:focus,.idea-add select:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+.idea-filters{margin-bottom:14px;flex:none}
+.ideas{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;align-items:start}
+.idea{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--ic,var(--accent));border-radius:10px;padding:12px 12px 10px;display:flex;flex-direction:column;gap:8px}
+.idea.st-i-new{--ic:var(--accent)}.idea.st-i-dig{--ic:var(--warn)}.idea.st-i-keep{--ic:var(--ok)}.idea.st-i-drop{--ic:var(--faint);opacity:.7}
+.idea-top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:start}
+.idea-act{margin-left:auto}
+.idea-top .trash{margin-top:2px}
+.idea-title{font:600 15px/1.35 var(--font-body);border:1px solid transparent;border-radius:6px;padding:4px 6px;margin-left:-6px;background:transparent;min-width:0;width:100%;resize:none;field-sizing:content;min-height:30px;overflow:hidden}
+.idea-title:hover,.idea-det:hover{border-color:var(--line)}
+.idea-title:focus,.idea-det:focus{outline:2px solid var(--accent);border-color:transparent}
+.idea-st,.idea-pj{padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);font-size:13px;max-width:150px}
+.idea-det{width:100%;border:1px solid transparent;border-radius:6px;padding:4px 6px;margin-left:-6px;background:transparent;resize:vertical;font-size:14px;color:var(--muted);min-height:30px}
+.idea-foot{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media (max-width:820px){.idea-add{grid-template-columns:minmax(0,1fr) auto}.idea-add select{grid-column:1/-1;grid-row:2}}
 </style>
 </head>
 <body>
@@ -765,7 +782,7 @@ const PRIOS=[{k:'critical',l:'Urgent & important',c:'var(--danger)'},{k:'urgent'
 const PRANK={critical:0,urgent:1,important:2,normal:3,low:4};
 const BASE_TYPES=[{k:'op',l:'OP commerciale',op:true},{k:'flash',l:'⚡ Vente flash',icon:'⚡',op:true},{k:'event',l:'Événement'},{k:'meeting',l:'Réunion'},{k:'deadline',l:'Rendu / deadline'},{k:'absence',l:'Absence / congé'}];
 const COLORS=['#2f54eb','#e8590c','#0ca678','#ae3ec9','#f59f00','#1098ad','#e03131','#5c7cfa','#2b8a3e','#d6336c'];
-const VIEWS={dashboard:'Tableau de bord',taches:'Tâches',kanban:'Kanban',calendrier:'Calendrier',chronologie:'Chronologie',evenements:'OP & événements',projets:'Projets',agents:'Agents'};
+const VIEWS={dashboard:'Tableau de bord',taches:'Tâches',kanban:'Kanban',calendrier:'Calendrier',chronologie:'Chronologie',evenements:'OP & événements',projets:'Projets',idees:'Boîte à idées',agents:'Agents'};
 const COLS=['projects','tasks','events','meta'];
 const DEMO=false;
 const BACKEND='supabase';
@@ -952,6 +969,37 @@ async function agMarkRead(){
 function agAv(a){return `<span class="ag-av ${a.c}" aria-hidden="true">${a.l}</span>`;}
 function agItems(r){return Array.isArray(r.items)?r.items.filter(x=>typeof x==='string'&&x.trim()):[];}
 function agLink(r,label,cls){const u=agSafeUrl(r.doc_url);return u?`<a class="${cls||'btn sm'}" href="${esc(u)}" target="_blank" rel="noopener">${label||'Rapport complet'}</a>`:'';}
+/* ---------- boîte à idées ---------- */
+const IDEA_ST=[{k:'new',l:'Nouvelle'},{k:'dig',l:'À creuser'},{k:'keep',l:'Retenue'},{k:'drop',l:'Écartée'}];
+const ideaDoc=()=>S.meta.ideas||{id:'ideas',items:[]};
+const ideaItems=()=>Array.isArray(ideaDoc().items)?ideaDoc().items:[];
+function saveIdeas(items){save('meta',{...ideaDoc(),id:'ideas',items});}
+function updIdea(id,patch){saveIdeas(ideaItems().map(x=>x.id===id?{...x,...patch,updatedAt:Date.now()}:x));}
+function viewIdeas(){
+  const f=ui.ideaF||'open',q=norm(ui.f.q);
+  let items=ideaItems().slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  const cnt=k=>ideaItems().filter(x=>k==='open'?x.status!=='drop':x.status===k).length;
+  if(f==='open')items=items.filter(x=>x.status!=='drop');else if(f!=='all')items=items.filter(x=>x.status===f);
+  if(q)items=items.filter(x=>norm(x.title+' '+(x.details||'')).includes(q));
+  const chips=[['open','En cours'],...IDEA_ST.map(s=>[s.k,s.l]),['all','Toutes']].map(([k,l])=>`<button class="cal-tab ${f===k?'on':''}" data-act="idea-filter" data-id="${k}">${l} <span class="tc">${k==='all'?ideaItems().length:cnt(k)}</span></button>`).join('');
+  const T=today();
+  return `<form class="idea-add" id="idea-form">
+      <label class="sr" for="idea-title">Nouvelle idée</label><input id="idea-title" maxlength="200" placeholder="Une idée ? Note-la ici, puis Entrée" autocomplete="off">
+      <label class="sr" for="idea-proj">Projet</label><select id="idea-proj">${projectOptions(ui.mainProject||'','Sans projet')}</select>
+      <button class="btn primary" type="submit">Noter</button>
+    </form>
+    <div class="cal-tabs idea-filters" role="tablist" aria-label="Filtrer les idées">${chips}</div>
+    <div class="ideas">${items.length?items.map(x=>{const t=x.taskId&&S.tasks[x.taskId];return `<article class="idea st-i-${esc(x.status)}">
+      <div class="idea-top"><textarea class="idea-title" data-idea="${esc(x.id)}" data-if="title" rows="1" aria-label="Titre de l’idée">${esc(x.title)}</textarea>
+        <button class="icon-btn trash" data-act="idea-del" data-id="${esc(x.id)}" aria-label="Supprimer l’idée" title="Supprimer">${TRASH_SVG}</button></div>
+      <textarea class="idea-det" data-idea="${esc(x.id)}" data-if="details" rows="${x.details?3:1}" placeholder="Détails, contexte, lien…" aria-label="Détails">${esc(x.details||'')}</textarea>
+      <div class="idea-foot"><label class="sr" for="ip-${esc(x.id)}">Projet</label><select id="ip-${esc(x.id)}" class="idea-pj" data-idea="${esc(x.id)}" data-if="projectId">${projectOptions(x.projectId||'','Sans projet')}</select>
+        <select class="idea-st" data-idea="${esc(x.id)}" data-if="status" aria-label="Statut">${IDEA_ST.map(s=>opt(s.k,s.l,x.status)).join('')}</select>
+        <span class="due">${diff(iso(new Date(x.createdAt||Date.now())),T)<=0?'aujourd’hui':dShort(iso(new Date(x.createdAt||Date.now())))}</span>
+        ${t?`<button class="btn sm idea-act" data-act="open-task" data-id="${t.id}">Voir ${tkey(t)}</button>`:`<button class="btn sm idea-act" data-act="idea-task" data-id="${esc(x.id)}">→ Tâche</button>`}</div>
+    </article>`;}).join(''):`<div class="dash-empty">${ideaItems().length?'Aucune idée dans ce filtre.':'Ta boîte à idées est vide. Note ici tout ce qui te passe par la tête : nouvelle OP, test A/B sur un mailing, amélioration d’une page station…'}</div>`}</div>`;
+}
+
 function viewAgents(){
   const cards=AGENTS.map(a=>{
     const r=agLatest(a.k);
@@ -1161,7 +1209,7 @@ const inProj=x=>ui.f.project==='all'||(ui.f.project==='none'?!x.projectId:x.proj
 function renderSide(){
   const T=today(),late=openTasks().filter(t=>t.due&&t.due<T).length;
   const soonOp=list('events').filter(e=>isOp(e)&&evEnd(e)>=T&&e.start<=addDays(T,14)).length;
-  const nav=[['dashboard','Tableau de bord',late?`<span class="n alert" title="${late} en retard">${late} ⚠</span>`:''],['taches','Tâches',`<span class="n">${openTasks().length}</span>`],['kanban','Kanban',''],['calendrier','Calendrier',''],['chronologie','Chronologie',''],['evenements','OP & événements',soonOp?`<span class="n" title="OP dans les 14 jours">${soonOp}</span>`:''],['projets','Projets',`<span class="n">${list('projects').length}</span>`],...(mode==='supa'?[['agents','Agents',agUnread()?`<span class="n" title="Nouveaux récaps">${agUnread()}</span>`:'']]:[])];
+  const nav=[['dashboard','Tableau de bord',late?`<span class="n alert" title="${late} en retard">${late} ⚠</span>`:''],['taches','Tâches',`<span class="n">${openTasks().length}</span>`],['kanban','Kanban',''],['calendrier','Calendrier',''],['chronologie','Chronologie',''],['evenements','OP & événements',soonOp?`<span class="n" title="OP dans les 14 jours">${soonOp}</span>`:''],['projets','Projets',`<span class="n">${list('projects').length}</span>`],['idees','Boîte à idées',ideaItems().filter(x=>x.status==='new').length?`<span class="n" title="Idées nouvelles">${ideaItems().filter(x=>x.status==='new').length}</span>`:''],...(mode==='supa'?[['agents','Agents',agUnread()?`<span class="n" title="Nouveaux récaps">${agUnread()}</span>`:'']]:[])];
   $('#nav').innerHTML=nav.map(([k,l,n])=>`<a href="#${k}" class="${ui.view===k?'on':''}" ${ui.view===k?'aria-current="page"':''}>${l}${n}</a>`).join('');
   const ps=projSorted();
   $('#plist').innerHTML=ps.length?ps.map(p=>`<button data-act="goto-project" data-id="${p.id}" class="${ui.view==='taches'&&ui.f.project===p.id?'on':''}" style="--pc:${esc(p.color)}"><span class="dot"></span><span class="nm">${esc(p.name)}</span><span class="n">${openTasks().filter(t=>t.projectId===p.id).length}</span></button>`).join(''):`<span style="padding:0 10px;font-size:13px;color:var(--side-muted)">Aucun projet</span>`;
@@ -1177,14 +1225,26 @@ function noteHTML(){
   if(['projects','tasks','events'].some(c=>list(c).some(x=>x.sample)))h+=`<div class="note info">Des exemples sont chargés pour te montrer l’outil. <button class="btn sm" data-act="clear-samples">Supprimer les exemples</button></div>`;
   return h;
 }
+/* projet principal : vue par défaut au démarrage */
+function mainProjectId(){
+  const st0=S.meta.settings||{};
+  if(st0.mainProject!==undefined)return st0.mainProject&&S.projects[st0.mainProject]?st0.mainProject:'';
+  const p=list('projects').find(x=>norm(x.name)==='snowrental');return p?p.id:'';
+}
+function applyMainProject(){
+  if(ui._mainApplied||!ready||!list('projects').length)return;
+  ui._mainApplied=true;const pid=mainProjectId();ui.mainProject=pid;
+  if(pid){ui.dcal=pid;ui.f.project=pid;}
+}
 function render(){
   renderSide();
   $('#page-title').textContent=VIEWS[ui.view];
   const v=$('#view');
   if(mode==='login'){$('#page-title').textContent='Mes tickets';v.innerHTML=loginHTML();return;}
   if(!ready){v.innerHTML=`<div class="loader">Chargement de tes tickets…</div>`;return;}
-  const empty=!list('projects').length&&!list('tasks').length&&!list('events').length;
-  const html=empty?welcomeHTML():({dashboard:viewDashboard,taches:viewList,kanban:viewKanban,calendrier:viewCalendar,chronologie:viewTimeline,evenements:viewEvents,projets:viewProjects,agents:viewAgents}[ui.view])();
+  applyMainProject();
+  const empty=!list('projects').length&&!list('tasks').length&&!list('events').length&&ui.view!=='idees';
+  const html=empty?welcomeHTML():({dashboard:viewDashboard,taches:viewList,kanban:viewKanban,calendrier:viewCalendar,chronologie:viewTimeline,evenements:viewEvents,projets:viewProjects,idees:viewIdeas,agents:viewAgents}[ui.view])();
   const sc=v.scrollTop;
   const tl=$('.tl-wrap');const tls=tl?[tl.scrollLeft,tl.scrollTop]:null;
   v.innerHTML=noteHTML()+html;v.scrollTop=sc;
@@ -1402,7 +1462,7 @@ function tableRow(t){
 function searchEvents(q){q=norm(q);if(!q)return [];return list('events').filter(e=>{const p=S.projects[e.projectId];return norm([e.title,e.code,e.conditions,e.notes,p&&p.name,et(e.type).l].join(' ')).includes(q);}).sort((a,b)=>b.start.localeCompare(a.start));}
 function viewList(){
   const f=ui.f,rows=sortTasks(filtered()),evHits=searchEvents(f.q);
-  const active=f.project!=='all'||f.status!=='open'||f.priority!=='all'||f.when!=='all'||f.q;
+  const active=f.project!==(ui.mainProject&&S.projects[ui.mainProject]?ui.mainProject:'all')||f.status!=='open'||f.priority!=='all'||f.when!=='all'||f.q;
   let body='';
   if(!rows.length)body=`<div class="empty-line" style="padding:16px">Aucune tâche ne correspond. <button class="chipbtn" data-act="new-task">+ Créer une tâche</button></div>`;
   else if(f.group==='project'){
@@ -1811,6 +1871,7 @@ function settingsModal(){
         <div class="types-list" id="s-types"></div>
         <div style="margin-top:6px"><button type="button" class="btn sm" id="s-type-add">+ Ajouter un type</button></div>
         <p class="hint">« Comme une OP » : le type a une bannière sur l’accueil, un code promo, des envois de mails, une checklist et une prolongation.</p></div>
+      <label class="field"><span>Projet principal (vue par défaut)</span><select id="s-main">${opt('','Aucun : tous les projets',mainProjectId())}${projSorted().map(p=>opt(p.id,p.name,mainProjectId())).join('')}</select></label>
       <fieldset class="field"><legend>Calendrier</legend><div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px">${['A','B','C'].map(z=>`<label class="inline-check"><input type="checkbox" id="s-z${z}" ${calPrefs().zones.includes(z)?'checked':''}> Vacances zone ${z}</label>`).join('')}<label class="inline-check"><input type="checkbox" id="s-fer" ${calPrefs().feries?'checked':''}> Jours fériés</label><label class="inline-check"><input type="checkbox" id="s-wk" ${calPrefs().weeks?'checked':''}> Numéros de semaine</label></div>
         <p class="hint">Vacances 2026-2027 officielles (zone A : Lyon, Bordeaux… ; B : Lille, Nantes… ; C : Paris, Créteil, Versailles, Toulouse, Montpellier).</p></fieldset>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn sm" id="s-export">Copier une sauvegarde (JSON)</button></div>
@@ -1827,7 +1888,7 @@ function settingsModal(){
   $('#s-types').addEventListener('click',x=>{const b=x.target.closest('[data-tdel]');if(b){types.splice(+b.dataset.tdel,1);drawTypes();}});
   $('#s-export').onclick=async()=>{try{await navigator.clipboard.writeText(JSON.stringify({projects:S.projects,tasks:S.tasks,events:S.events},null,1));toast('Sauvegarde copiée dans le presse-papiers');}catch(e){toast('Copie refusée par le navigateur');}};
   $('#s-restore-go').onclick=()=>{let d;try{d=JSON.parse($('#s-restore').value);}catch(e){toast('Ce texte n’est pas une sauvegarde valide');return;}let n=0;['projects','tasks','events','meta'].forEach(c=>{Object.values((d&&d[c])||{}).forEach(o=>{if(o&&o.id){const cur=S[c][o.id];if(!cur||(o.updatedAt||0)>(cur.updatedAt||0)){save(c,o);n++;}}});});hideModal();toast(n?`${n} élément(s) restauré(s)`:'Rien de nouveau dans cette sauvegarde');};
-  $('#s-save').onclick=()=>{const clean=types.map(t=>({k:t.k,name:String(t.name||'').trim()||'Sans nom',icon:String(t.icon||'').trim(),op:!!t.op}));const removed=customTypes().filter(t=>!clean.some(c=>c.k===t.k));list('events').filter(e=>removed.some(r=>r.k===e.type)).forEach(e=>save('events',{...e,type:'event'}));const cur=S.meta.settings||{id:'settings'};save('meta',{...cur,id:'settings',types:clean,cal:{zones:['A','B','C'].filter(z=>$('#s-z'+z).checked),feries:$('#s-fer').checked,weeks:$('#s-wk').checked}});hideModal();toast('Paramètres enregistrés');};
+  $('#s-save').onclick=()=>{const clean=types.map(t=>({k:t.k,name:String(t.name||'').trim()||'Sans nom',icon:String(t.icon||'').trim(),op:!!t.op}));const removed=customTypes().filter(t=>!clean.some(c=>c.k===t.k));list('events').filter(e=>removed.some(r=>r.k===e.type)).forEach(e=>save('events',{...e,type:'event'}));const cur=S.meta.settings||{id:'settings'};save('meta',{...cur,id:'settings',types:clean,mainProject:$('#s-main').value,cal:{zones:['A','B','C'].filter(z=>$('#s-z'+z).checked),feries:$('#s-fer').checked,weeks:$('#s-wk').checked}});ui.mainProject=$('#s-main').value;hideModal();toast('Paramètres enregistrés');};
 }
 
 /* ---------- import du calendrier d'OP ---------- */
@@ -2219,7 +2280,7 @@ async function clearSamples(){
 let toastT;
 function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('on'),2600);}
 function go(view){if(location.hash!=='#'+view)location.hash=view;else{ui.view=view;schedule();}}
-function resetF(){Object.assign(ui.f,{project:'all',status:'open',priority:'all',when:'all',sort:'due',q:''});$('#q').value='';}
+function resetF(){Object.assign(ui.f,{project:ui.mainProject&&S.projects[ui.mainProject]?ui.mainProject:'all',status:'open',priority:'all',when:'all',sort:'due',q:''});$('#q').value='';}
 function deleteTasks(ts,msg){
   confirmBox(ts.length>1?'Supprimer ces tâches ?':'Supprimer la tâche ?',msg).then(ok=>{if(!ok)return;const ids=new Set(ts.map(t=>t.id));
     ts.forEach(t=>removeItem('tasks',t.id));
@@ -2243,6 +2304,10 @@ document.addEventListener('click',e=>{
     case 'open-event':if(inModal)hideModal();if(drawer)closeDrawer();eventModal(id);break;
     case 'new-event':if(inModal)hideModal();if(drawer)closeDrawer();eventModal(null,{start:a.dataset.start,type:a.dataset.type,projectId:a.dataset.project});break;
     case 'new-project':projectModal(null);break;
+    case 'idea-filter':ui.ideaF=id;schedule();break;
+    case 'idea-del':confirmBox('Supprimer cette idée ?','Elle sera supprimée définitivement.').then(ok=>{if(ok){saveIdeas(ideaItems().filter(x=>x.id!==id));toast('Idée supprimée');}});break;
+    case 'idea-task':{const x=ideaItems().find(i=>i.id===id);if(!x)break;const t={id:newId(),num:nextNum(),title:x.title,desc:x.details||'',projectId:x.projectId||'',status:'todo',priority:'normal',start:'',due:'',eventId:'',tags:['idée'],blockedBy:[],checklist:[],comments:[{id:newId(),sys:true,text:'Créée depuis la boîte à idées',at:Date.now()}],createdAt:Date.now()};
+      save('tasks',t);updIdea(id,{taskId:t.id,status:'keep'});toast(`${tkey(t)} créée depuis l’idée`);break;}
     case 'goto-rem':{const r=$('#rappels');r&&r.scrollIntoView({behavior:'smooth',block:'start'});break;}
     case 'rem-mail-sent':{const ev=S.events[id];if(ev){save('events',{...ev,mails:(ev.mails||[]).map(m=>m.id===a.dataset.mid?{...m,sent:true}:m)});toast('Envoi noté comme fait');}break;}
     case 'rem-cl':{const ev=S.events[id];if(ev){save('events',{...ev,checklist:(ev.checklist||[]).map(c=>c.id===a.dataset.cid?{...c,done:true}:c)});toast('Étape cochée');}break;}
@@ -2276,9 +2341,12 @@ document.addEventListener('click',e=>{
   }
 });
 document.addEventListener('submit',e=>{if(e.target.id==='login-form'){e.preventDefault();doLogin(false);}
+  if(e.target.id==='idea-form'){e.preventDefault();const title=$('#idea-title').value.trim();if(!title){$('#idea-title').focus();return;}saveIdeas([{id:newId(),title,details:'',projectId:$('#idea-proj').value,status:'new',createdAt:Date.now()},...ideaItems()]);toast('Idée notée');setTimeout(()=>{const i=$('#idea-title');i&&i.focus();},50);}
   if(e.target.id==='rem-form'){e.preventDefault();const text=$('#rem-text').value.trim();if(!text){$('#rem-text').focus();return;}saveRem(remItems().filter(r=>!r.done||r.date>=addDays(today(),-30)).concat({id:newId(),text,date:$('#rem-date').value||today(),time:$('#rem-time').value||'',done:false}));toast('Rappel ajouté');}});
 document.addEventListener('click',e=>{if(e.target.id==='lg-signup')doLogin(true);});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.classList&&e.target.classList.contains('idea-title')){e.preventDefault();e.target.blur();}});
 document.addEventListener('change',e=>{
+  const ie=e.target.closest&&e.target.closest('[data-idea]');if(ie){const v=ie.value;if(ie.dataset.if==='title'&&!v.trim())return;updIdea(ie.dataset.idea,{[ie.dataset.if]:ie.dataset.if==='title'?v.trim():v});return;}
   if(drawer&&droot.contains(e.target)){
     if(e.target.id==='d-dep'){if(e.target.value){drawer.t.blockedBy.push(e.target.value);commitDrawer();renderDrawer();}return;}
     if(e.target.dataset.df){drawerField(e.target);return;}
