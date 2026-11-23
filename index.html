@@ -152,6 +152,11 @@ h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spaci
 /* tableau de bord */
 .share-f{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.share-chip{border:1px solid var(--line,#d8dce5);background:transparent;border-radius:999px;padding:3px 10px;font:500 13px var(--font-body);cursor:pointer;color:inherit}.share-chip.on{background:var(--accent,#2b59c3);border-color:var(--accent,#2b59c3);color:#fff}.tag.shared{background:#eef3ff;color:#2b4a9a}
 .pw-force{position:fixed;inset:0;z-index:9999;background:rgba(15,18,30,.72);display:flex;align-items:center;justify-content:center;padding:16px}.pw-card{background:var(--bg,#fff);color:inherit;border-radius:14px;padding:24px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35)}.pw-card h2{margin:0 0 6px}.creds{white-space:pre-wrap;font:13px/1.5 var(--font-mono,monospace);background:var(--soft,#f3f5f9);padding:10px 12px;border-radius:8px;user-select:all}
+.assign{border:1px solid var(--line,#e2e5ec);border-radius:12px;padding:10px 12px;margin:10px 0 4px;background:var(--soft,#f7f8fb)}.assign.shared{border-color:#c9d6ff;background:#f1f5ff}
+.as-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px}.as-state{font:700 13px var(--font-body);padding:2px 10px;border-radius:999px;background:#e9ebf0;color:#3b4252}.as-state.on{background:#2b59c3;color:#fff}.as-sub{font-size:13px;color:var(--muted,#667085)}
+.assign.shared .as-head+.as-line:not(:has(.as-lbl)){flex-wrap:nowrap}.as-line{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px}.as-lbl{font:600 11px var(--font-body);text-transform:uppercase;letter-spacing:.05em;color:var(--muted,#667085);margin-right:4px}
+.as-chip{display:inline-flex;align-items:center;gap:6px;border:1px dashed #b7bfcc;background:#fff;border-radius:999px;padding:3px 10px 3px 3px;font:500 13px var(--font-body);color:inherit;cursor:pointer}.as-chip:hover{border-color:#2b59c3}.as-chip.on{border:1px solid #2b59c3;background:#2b59c3;color:#fff}.as-chip.me{border-style:solid;cursor:default;background:#fff}.as-x{font-weight:700;opacity:.7;margin-left:2px}
+.av{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#dfe5f2;color:#2b3a5c;font:700 10px var(--font-body)}.av.owner{background:#2b59c3;color:#fff}.as-chip.on .av{background:#fff;color:#2b59c3}
 .greet{font:700 26px/1.2 var(--font-head,var(--font-body));letter-spacing:-.01em;margin:2px 0 4px}
 .greet-sub{color:var(--muted,#667);font-size:14px;margin:0 0 14px}
 .dhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
@@ -1328,7 +1333,7 @@ function dueBadge(t){
 }
 function checkBtn(t){const on=t.status==='done';return `<button class="check ${on?'on':''}" data-act="toggle-done" data-id="${t.id}" aria-label="${on?'Rouvrir':'Terminer'} : ${esc(t.title)}">${on?CHECK_SVG:''}</button>`;}
 function clProg(t){const c=t.checklist||[];if(!c.length)return '';return `<span class="due" title="Sous-tâches">☑ ${c.filter(x=>x.done).length}/${c.length}</span>`;}
-function shareFlag(t){if(mode!=='supa')return '';const sw=t.sharedWith||[];if(!isMine(t))return `<span class="tag shared" title="Assignée par ${esc(personName(t._owner))}">↙ de ${esc(personName(t._owner))}</span>`;return sw.length?`<span class="tag shared" title="Assignée à ${esc(sw.map(personName).join(', '))}">👤 ${esc(sw.map(personName).join(', '))}</span>`:'';}
+function shareFlag(t){if(mode!=='supa')return '';const sw=t.sharedWith||[];if(!isMine(t))return `<span class="tag shared" title="${esc(personName(t._owner))} t’a assigné cette tâche">👥 de ${esc(personName(t._owner))}</span>`;return sw.length?`<span class="tag shared" title="Assignée aussi à ${esc(sw.map(personName).join(', '))}">👥 + ${esc(sw.map(personName).join(', '))}</span>`:'';}
 function flags(t){return shareFlag(t)+(t.recur&&RECUR_S[t.recur]&&t.status!=='done'?`<span class="tag recur" title="${esc(RECUR[t.recur])}">↻ ${RECUR_S[t.recur]}</span>`:'')+(isBlocked(t)?'<span class="blocked">Bloquée</span>':'')+(t.waitingFor&&t.status!=='done'?`<span class="waiting" title="En attente de : ${esc(t.waitingFor)}">⏳ ${esc(t.waitingFor)}</span>`:'')+(t.tags||[]).slice(0,2).map(x=>`<span class="tag">#${esc(x)}</span>`).join('');}
 function taskRow(t,stack){
   return `<div class="trow ${stack===true?'stack':''} ${t.status==='done'?'is-done':''}" data-act="open-task" data-id="${t.id}" tabindex="0" role="button">
@@ -1777,12 +1782,23 @@ function closeDrawer(){
   const ret=drawer.ret;drawer=null;droot.hidden=true;droot.innerHTML='';
   if(ret&&document.contains(ret))ret.focus();
 }
+const initials=n=>String(n||'?').trim().split(/\s+/).map(x=>x[0]||'').join('').slice(0,2).toUpperCase();
+const avatar=(n,cls='')=>`<span class="av ${cls}" aria-hidden="true">${esc(initials(n))}</span>`;
 function shareFieldHTML(t){
-  if(!canShare())return '';
-  if(!isMine(t)){const others=(t.sharedWith||[]).filter(x=>x!==myId());return `<span class="k">Assignée à</span><span class="share-f"><span class="hint">Assignée par <b>${esc(personName(t._owner))}</b> à toi${others.length?' et à '+esc(others.map(personName).join(', ')):''}. Tu peux la faire avancer ; seul ${esc(personName(t._owner))} choisit à qui elle est assignée.</span></span>`;}
-  const sw=t.sharedWith||[];
-  const chips=teamPeople.filter(p=>p.user_id!==myId()).map(p=>{const on=sw.includes(p.user_id);return `<button type="button" class="share-chip ${on?'on':''}" data-share="${esc(p.user_id)}" aria-pressed="${on}">${on?'✓ ':''}${esc(p.name)}</button>`;}).join('');
-  return `<span class="k">Assignée à</span><span class="share-f">${chips}<span class="hint">${sw.length?'Cette tâche apparaît aussi dans leur espace (et seulement elle).':'🔒 Personne : tâche privée, visible par toi seul.'}</span></span>`;
+  if(mode!=='supa')return '';
+  const me=myId(),meName=myName||'Moi';
+  if(!isMine(t)){
+    const owner=personName(t._owner),others=(t.sharedWith||[]).filter(x=>x!==me);
+    return `<div class="assign shared"><div class="as-head"><span class="as-state on">👥 Tâche assignée</span></div>
+      <div class="as-line">${avatar(owner,'owner')}<span style="flex:1;min-width:0"><b>${esc(owner)}</b> te l’a assignée${others.length?` (ainsi qu’à ${esc(others.map(personName).join(', '))})`:''}. Tu peux la faire avancer ; seul·e ${esc(owner)} peut changer à qui elle est assignée.</span></div></div>`;
+  }
+  const sw=t.sharedWith||[],others=teamPeople.filter(p=>p.user_id!==me);
+  const state=sw.length?`<span class="as-state on">👥 Assignée</span><span class="as-sub">Elle apparaît aussi dans le Kairn de ${esc(sw.map(personName).join(', '))}.</span>`
+                       :`<span class="as-state">🔒 Privée</span><span class="as-sub">Toi seul·e la vois.${others.length?' Assigne-la à quelqu’un pour la partager.':''}</span>`;
+  const people=others.length?others.map(p=>{const on=sw.includes(p.user_id);return `<button type="button" class="as-chip ${on?'on':''}" data-share="${esc(p.user_id)}" aria-pressed="${on}" title="${on?'Retirer':'Assigner à'} ${esc(p.name)}">${avatar(p.name)}${esc(p.name)}<span class="as-x">${on?'×':'+'}</span></button>`;}).join('')
+    :`<span class="as-sub">${isMember?'Personne d’autre dans ton équipe pour l’instant.':'Crée des comptes dans « Équipe et accès » pour assigner des tâches à tes collègues.'}</span>`;
+  return `<div class="assign ${sw.length?'shared':''}"><div class="as-head">${state}</div>
+    <div class="as-line"><span class="as-lbl">Assigner à</span><span class="as-chip me" title="Tu restes responsable de la tâche">${avatar(meName,'owner')}${esc(meName)} (toi)</span>${people}</div></div>`;
 }
 function renderDrawer(focusTitle){
   const t=drawer.t,T=today();
@@ -1798,6 +1814,7 @@ function renderDrawer(focusTitle){
       <span class="spacer"></span>${drawer.isNew?'':isMine(t)?'<button class="btn sm danger-ghost" id="d-del">Supprimer</button>':'<button class="btn sm danger-ghost" id="d-del">Ne plus suivre</button>'}<button class="icon-btn" data-close-drawer aria-label="Fermer">×</button></div>
     <div class="dr-body">
       <div><label class="sr" for="d-title">Titre</label><textarea id="d-title" class="dr-title" rows="1" placeholder="Titre de la tâche (Entrée pour créer)">${esc(t.title)}</textarea>
+      ${shareFieldHTML(t)}
       ${drawer.isNew?'<p class="hint">Saisis un titre puis appuie sur Entrée : la tâche est créée et chaque modification est enregistrée automatiquement.</p>':''}</div>
       <div class="dr-fields">
         <label for="d-status">Statut</label><select id="d-status" data-df="status" class="st-${t.status}" style="font-weight:600">${STATUSES.map(s=>opt(s.k,s.l,t.status)).join('')}</select>
@@ -1805,7 +1822,6 @@ function renderDrawer(focusTitle){
         <span class="k">Dates</span><span class="dates"><label class="sr" for="d-start">Début</label><input type="date" id="d-start" data-df="start" value="${esc(t.start||'')}" title="Début"><span class="due">→</span><label class="sr" for="d-due">Échéance</label><input type="date" id="d-due" data-df="due" value="${esc(t.due||'')}" title="Échéance">${t.due?`<span class="due ${late?'late':''}">${t.status==='done'?'':rel(t.due)}</span>`:''}</span>
         <label for="d-recur">Récurrence</label><span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="d-recur" data-df="recur">${opt('','Aucune',t.recur||'')}${Object.entries(RECUR).map(([k,l])=>opt(k,l,t.recur||'')).join('')}</select>${t.recur?`<span class="hint">À la fin, la suivante est créée toute seule${t.due?' pour le '+dShort(nextOccur(t.due,t.recur)):''}</span>`:''}</span>
         <label for="d-event">OP liée</label><span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="d-event" data-df="eventId">${evOpts}</select>${t.projectId&&!list('events').some(e=>isOp(e)&&(e.projectId||'')===t.projectId)?`<span class="hint">Aucune OP dans ce projet</span>`:''}</span>
-        ${shareFieldHTML(t)}
         <label for="d-tags">Étiquettes</label><input id="d-tags" data-df="tags" value="${esc(t.tags.join(', '))}" placeholder="ex. mailing, seo">
         <span class="k">Bloquée par</span><span class="deps">${t.blockedBy.map(id=>{const b=S.tasks[id];return b?`<span class="dep ${b.status==='done'?'ok':''}">${esc(tkey(b)+' · '+b.title)}<button data-dep-del="${id}" aria-label="Retirer la dépendance">×</button></span>`:'';}).join('')}<label class="sr" for="d-dep">Ajouter une dépendance</label><select id="d-dep" style="max-width:260px">${depOpts}</select></span>
         <label for="d-wait">En attente de</label><span class="wait-f"><input id="d-wait" data-df="waitingFor" list="d-wait-list" maxlength="120" value="${esc(t.waitingFor||'')}" placeholder="Personne ou chose (ex. validation de la direction, retour de l’IT)"><datalist id="d-wait-list">${[...new Set(list('tasks').map(x=>x.waitingFor).filter(Boolean))].slice(0,30).map(v=>`<option value="${esc(v)}"></option>`).join('')}</datalist>${t.waitingFor&&t.waitingSince?`<span class="due ${diff(t.waitingSince,T)>=3?'soon':''}">${diff(t.waitingSince,T)<=0?'depuis aujourd’hui':'depuis '+diff(t.waitingSince,T)+' j'}</span>`:''}</span>
