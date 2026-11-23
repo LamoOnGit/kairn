@@ -157,6 +157,7 @@ h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spaci
 .assign.shared .as-head+.as-line:not(:has(.as-lbl)){flex-wrap:nowrap}.as-line{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px}.as-lbl{font:600 11px var(--font-body);text-transform:uppercase;letter-spacing:.05em;color:var(--muted,#667085);margin-right:4px}
 .as-chip{display:inline-flex;align-items:center;gap:6px;border:1px dashed #b7bfcc;background:#fff;border-radius:999px;padding:3px 10px 3px 3px;font:500 13px var(--font-body);color:inherit;cursor:pointer}.as-chip:hover{border-color:#2b59c3}.as-chip.on{border:1px solid #2b59c3;background:#2b59c3;color:#fff}.as-chip.me{border-style:solid;cursor:default;background:#fff}.as-x{font-weight:700;opacity:.7;margin-left:2px}
 .av{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#dfe5f2;color:#2b3a5c;font:700 10px var(--font-body)}.av.owner{background:#2b59c3;color:#fff}.as-chip.on .av{background:#fff;color:#2b59c3}
+.assign.empty{border-color:var(--danger,#d33)}.as-chip.ro{cursor:default;border-style:solid}.d-create{display:flex;align-items:center;gap:12px;margin:12px 0 4px;flex-wrap:wrap}.d-create .hint{flex:1;min-width:200px;margin:0}
 .greet{font:700 26px/1.2 var(--font-head,var(--font-body));letter-spacing:-.01em;margin:2px 0 4px}
 .greet-sub{color:var(--muted,#667);font-size:14px;margin:0 0 14px}
 .dhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
@@ -1000,6 +1001,8 @@ function can(f){if(mode!=='supa'||!isMember)return true;const v=myPerms[f];retur
 const myId=()=>sbUser?sbUser.id:'';
 const isMine=t=>!t||!t._owner||t._owner===myId();
 const personName=id=>{const p=teamPeople.find(x=>x.user_id===id);return p?p.name:'quelqu’un';};
+const chargesOf=t=>{if(!t)return [];if(Array.isArray(t.charges))return t.charges;const o=t._owner||myId();return [...new Set([o,...(t.sharedWith||[])])];};
+const whoName=id=>id===myId()?'toi':personName(id);
 const canShare=()=>mode==='supa'&&teamPeople.length>1;
 function colFeature(col,id){return col==='tasks'?'taches':col==='events'?'evenements':col==='projects'?'projets':col==='meta'?(id==='ideas'?'idees':'_owner'):'_owner';}
 function canWrite(col,id){const f=colFeature(col,id);return f==='_owner'?true:can(f);}
@@ -1333,7 +1336,7 @@ function dueBadge(t){
 }
 function checkBtn(t){const on=t.status==='done';return `<button class="check ${on?'on':''}" data-act="toggle-done" data-id="${t.id}" aria-label="${on?'Rouvrir':'Terminer'} : ${esc(t.title)}">${on?CHECK_SVG:''}</button>`;}
 function clProg(t){const c=t.checklist||[];if(!c.length)return '';return `<span class="due" title="Sous-tâches">☑ ${c.filter(x=>x.done).length}/${c.length}</span>`;}
-function shareFlag(t){if(mode!=='supa')return '';const sw=t.sharedWith||[];if(!isMine(t))return `<span class="tag shared" title="${esc(personName(t._owner))} t’a assigné cette tâche">👥 de ${esc(personName(t._owner))}</span>`;return sw.length?`<span class="tag shared" title="Assignée aussi à ${esc(sw.map(personName).join(', '))}">👥 + ${esc(sw.map(personName).join(', '))}</span>`:'';}
+function shareFlag(t){if(mode!=='supa')return '';const c=chargesOf(t),me=myId();if(!c.some(x=>x!==me)&&isMine(t))return '';const names=c.map(id=>id===me?'toi':personName(id)).join(', ');return `<span class="tag shared" title="Tâche publique · chargés de mission : ${esc(names)}${isMine(t)?'':' · créée par '+esc(personName(t._owner))}">👥 ${esc(names)}</span>`;}
 function flags(t){return shareFlag(t)+(t.recur&&RECUR_S[t.recur]&&t.status!=='done'?`<span class="tag recur" title="${esc(RECUR[t.recur])}">↻ ${RECUR_S[t.recur]}</span>`:'')+(isBlocked(t)?'<span class="blocked">Bloquée</span>':'')+(t.waitingFor&&t.status!=='done'?`<span class="waiting" title="En attente de : ${esc(t.waitingFor)}">⏳ ${esc(t.waitingFor)}</span>`:'')+(t.tags||[]).slice(0,2).map(x=>`<span class="tag">#${esc(x)}</span>`).join('');}
 function taskRow(t,stack){
   return `<div class="trow ${stack===true?'stack':''} ${t.status==='done'?'is-done':''}" data-act="open-task" data-id="${t.id}" tabindex="0" role="button">
@@ -1767,18 +1770,22 @@ function openTask(id,preset={}){
   if(droot.hidden)drawer={t,isNew:!ex,ret:document.activeElement};else drawer={...drawer,t,isNew:!ex};
   renderDrawer(true);
 }
-function commitDrawer(){
-  if(!drawer)return;const t=drawer.t;
-  if(!t.title.trim())return;
+function commitDrawer(create){
+  if(!drawer)return false;const t=drawer.t;
+  if(drawer.isNew&&!create)return false;
+  if(!t.title.trim()){if(create){toast('Donne un titre à la tâche.');const ta=$('#d-title');if(ta)ta.focus();}return false;}
+  if(drawer.isNew&&mode==='supa'){const c=chargesOf(t);if(!c.length){toast('Choisis au moins un chargé de mission.');return false;}t.charges=c;t.sharedWith=c.filter(x=>x!==myId());}
   const first=drawer.isNew;drawer.isNew=false;
   save('tasks',t);
   if(first)toast(`${tkey(t)} créée`);
+  return true;
 }
 function closeDrawer(){
   if(!drawer)return;
   const t=drawer.t;
   const ta=$('#d-title');if(ta)t.title=ta.value.trim();const de=$('#d-desc');if(de)t.desc=de.value;
-  if(t.title&&(drawer.isNew||JSON.stringify({...t,updatedAt:0})!==JSON.stringify({...(S.tasks[t.id]||{}),updatedAt:0})))commitDrawer();
+  if(drawer.isNew&&t.title){confirmBox('Créer cette tâche ?',`« ${t.title} » n’a pas encore été créée.`,'Créer la tâche').then(ok=>{if(ok&&drawer&&commitDrawer(true))closeDrawer();else if(!ok&&drawer){drawer.isNew=true;drawer.t.title='';closeDrawer();}});return;}
+  if(!drawer.isNew&&t.title&&JSON.stringify({...t,updatedAt:0})!==JSON.stringify({...(S.tasks[t.id]||{}),updatedAt:0}))commitDrawer();
   const ret=drawer.ret;drawer=null;droot.hidden=true;droot.innerHTML='';
   if(ret&&document.contains(ret))ret.focus();
 }
@@ -1786,19 +1793,19 @@ const initials=n=>String(n||'?').trim().split(/\s+/).map(x=>x[0]||'').join('').s
 const avatar=(n,cls='')=>`<span class="av ${cls}" aria-hidden="true">${esc(initials(n))}</span>`;
 function shareFieldHTML(t){
   if(mode!=='supa')return '';
-  const me=myId(),meName=myName||'Moi';
+  const me=myId(),c=chargesOf(t),pub=c.some(x=>x!==me);
+  const state=pub?`<span class="as-state on">🌐 Publique</span><span class="as-sub">Visible aussi par ${esc([...new Set([t._owner||me,...c])].filter(x=>x!==me).map(personName).join(', '))}.</span>`
+                 :`<span class="as-state">🔒 Privée</span><span class="as-sub">${c.length?'Toi seul·e la vois.':'Choisis au moins un chargé de mission.'}</span>`;
   if(!isMine(t)){
-    const owner=personName(t._owner),others=(t.sharedWith||[]).filter(x=>x!==me);
-    return `<div class="assign shared"><div class="as-head"><span class="as-state on">👥 Tâche assignée</span></div>
-      <div class="as-line">${avatar(owner,'owner')}<span style="flex:1;min-width:0"><b>${esc(owner)}</b> te l’a assignée${others.length?` (ainsi qu’à ${esc(others.map(personName).join(', '))})`:''}. Tu peux la faire avancer ; seul·e ${esc(owner)} peut changer à qui elle est assignée.</span></div></div>`;
+    return `<div class="assign shared"><div class="as-head">${state}</div>
+      <div class="as-line"><span class="as-lbl">Chargés de mission</span>${c.map(id=>`<span class="as-chip ro ${id===me?'on':''}">${avatar(id===me?(myName||'Moi'):personName(id))}${esc(id===me?(myName||'Moi')+' (toi)':personName(id))}</span>`).join('')}</div>
+      <p class="as-sub" style="margin:8px 0 0">Créée par <b>${esc(personName(t._owner))}</b>. Tu peux la faire avancer ; seul·e ${esc(personName(t._owner))} change les chargés de mission.</p></div>`;
   }
-  const sw=t.sharedWith||[],others=teamPeople.filter(p=>p.user_id!==me);
-  const state=sw.length?`<span class="as-state on">👥 Assignée</span><span class="as-sub">Elle apparaît aussi dans le Kairn de ${esc(sw.map(personName).join(', '))}.</span>`
-                       :`<span class="as-state">🔒 Privée</span><span class="as-sub">Toi seul·e la vois.${others.length?' Assigne-la à quelqu’un pour la partager.':''}</span>`;
-  const people=others.length?others.map(p=>{const on=sw.includes(p.user_id);return `<button type="button" class="as-chip ${on?'on':''}" data-share="${esc(p.user_id)}" aria-pressed="${on}" title="${on?'Retirer':'Assigner à'} ${esc(p.name)}">${avatar(p.name)}${esc(p.name)}<span class="as-x">${on?'×':'+'}</span></button>`;}).join('')
-    :`<span class="as-sub">${isMember?'Personne d’autre dans ton équipe pour l’instant.':'Crée des comptes dans « Équipe et accès » pour assigner des tâches à tes collègues.'}</span>`;
-  return `<div class="assign ${sw.length?'shared':''}"><div class="as-head">${state}</div>
-    <div class="as-line"><span class="as-lbl">Assigner à</span><span class="as-chip me" title="Tu restes responsable de la tâche">${avatar(meName,'owner')}${esc(meName)} (toi)</span>${people}</div></div>`;
+  const people=[{user_id:me,name:(myName||'Moi')+' (toi)',av:myName||'Moi'},...teamPeople.filter(p=>p.user_id!==me)];
+  const chips=people.map(p=>{const on=c.includes(p.user_id);return `<button type="button" class="as-chip ${on?'on':''}" data-share="${esc(p.user_id)}" aria-pressed="${on}" title="${on?'Retirer':'Ajouter'} ${esc(p.name)}">${avatar(p.av||p.name)}${esc(p.name)}<span class="as-x">${on?'×':'+'}</span></button>`;}).join('');
+  const help=teamPeople.length>1?'Toi seul·e = privée · toi + quelqu’un = publique.':(isMember?'':'Crée des comptes dans « Équipe et accès » pour ajouter tes collègues.');
+  return `<div class="assign ${pub?'shared':''} ${c.length?'':'empty'}"><div class="as-head">${state}</div>
+    <div class="as-line"><span class="as-lbl">Chargés de mission</span>${chips}</div>${help?`<p class="as-sub" style="margin:8px 0 0">${help}</p>`:''}</div>`;
 }
 function renderDrawer(focusTitle){
   const t=drawer.t,T=today();
@@ -1815,7 +1822,7 @@ function renderDrawer(focusTitle){
     <div class="dr-body">
       <div><label class="sr" for="d-title">Titre</label><textarea id="d-title" class="dr-title" rows="1" placeholder="Titre de la tâche (Entrée pour créer)">${esc(t.title)}</textarea>
       ${shareFieldHTML(t)}
-      ${drawer.isNew?'<p class="hint">Saisis un titre puis appuie sur Entrée : la tâche est créée et chaque modification est enregistrée automatiquement.</p>':''}</div>
+      ${drawer.isNew?'<div class="d-create"><button type="button" class="btn primary" id="d-create">Créer la tâche</button><span class="hint">Remplis ce dont tu as besoin puis crée la tâche. Ensuite, chaque modification est enregistrée automatiquement.</span></div>':''}</div>
       <div class="dr-fields">
         <label for="d-status">Statut</label><select id="d-status" data-df="status" class="st-${t.status}" style="font-weight:600">${STATUSES.map(s=>opt(s.k,s.l,t.status)).join('')}</select>
         <label for="d-prio">Priorité</label><select id="d-prio" data-df="priority" class="prio-${t.priority}" style="font-weight:600">${PRIOS.map(p=>opt(p.k,p.l,t.priority)).join('')}</select>
@@ -1840,7 +1847,8 @@ function renderDrawer(focusTitle){
   droot.hidden=false;
   const ta=$('#d-title');const fit=()=>{ta.style.height='auto';ta.style.height=ta.scrollHeight+'px';};fit();
   ta.addEventListener('input',()=>{drawer.t.title=ta.value.replace(/\n/g,' ');fit();});
-  ta.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();drawer.t.title=ta.value.trim();if(drawer.t.title){commitDrawer();renderDrawer();}}});
+  ta.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();drawer.t.title=ta.value.trim();if(drawer.isNew){if(commitDrawer(true))renderDrawer();}else if(drawer.t.title){commitDrawer();renderDrawer();}}});
+  ta.addEventListener('input',()=>{if(drawer&&drawer.isNew)drawer.t.title=ta.value.trim();});
   ta.addEventListener('blur',()=>{const v=ta.value.trim();if(drawer&&v&&v!==(S.tasks[drawer.t.id]||{}).title){drawer.t.title=v;commitDrawer();}});
   const de=$('#d-desc');de.addEventListener('change',()=>{drawer.t.desc=de.value;commitDrawer();});
   if(focusTitle&&drawer.isNew)setTimeout(()=>ta.focus(),30);
@@ -1872,7 +1880,11 @@ function drawerClick(e){
   const dd=e.target.closest('[data-dep-del]');if(dd){t.blockedBy=t.blockedBy.filter(x=>x!==dd.dataset.depDel);commitDrawer();renderDrawer();return true;}
   if(e.target.closest('#d-cl-add')){addCl();return true;}
   if(e.target.closest('#d-com-add')){addCom();return true;}
-  const shb=e.target.closest('[data-share]');if(shb&&isMine(t)){const u=shb.dataset.share;const sw=new Set(t.sharedWith||[]);sw.has(u)?sw.delete(u):sw.add(u);t.sharedWith=[...sw];if(!drawer.isNew&&t.title.trim())commitDrawer();renderDrawer();return true;}
+  const shb=e.target.closest('[data-share]');if(shb&&isMine(t)){const u=shb.dataset.share;const c=new Set(chargesOf(t));c.has(u)?c.delete(u):c.add(u);
+    if(!c.size&&!drawer.isNew){toast('Il faut au moins un chargé de mission.');return true;}
+    t.charges=[...c];t.sharedWith=t.charges.filter(x=>x!==myId());const ta=$('#d-title');if(ta&&drawer.isNew)t.title=ta.value.trim();
+    if(!drawer.isNew)commitDrawer();renderDrawer();return true;}
+  if(e.target.closest('#d-create')){const ta=$('#d-title');if(ta)t.title=ta.value.trim();const de=$('#d-desc');if(de)t.desc=de.value;if(commitDrawer(true))renderDrawer();return true;}
   if(e.target.closest('#d-del')&&!isMine(t)){confirmBox('Ne plus suivre cette tâche ?',`${tkey(t)} « ${t.title} » disparaîtra de ton espace. Elle reste chez ${personName(t._owner)}.`).then(ok=>{if(ok){removeItem('tasks',t.id);drawer.isNew=true;drawer.t.title='';closeDrawer();toast('Tâche retirée de ton espace');}});return true;}
   if(e.target.closest('#d-del')){confirmBox('Supprimer la tâche ?',`${tkey(t)} « ${t.title} » sera supprimée définitivement.`).then(ok=>{if(ok){removeItem('tasks',t.id);list('tasks').filter(x=>(x.blockedBy||[]).includes(t.id)).forEach(x=>save('tasks',{...x,blockedBy:x.blockedBy.filter(y=>y!==t.id)}));drawer.isNew=true;drawer.t.title='';closeDrawer();toast('Tâche supprimée');}});return true;}
   return false;
