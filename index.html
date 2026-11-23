@@ -150,6 +150,7 @@ h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spaci
 .check svg{width:12px;height:12px}
 
 /* tableau de bord */
+.share-f{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.share-chip{border:1px solid var(--line,#d8dce5);background:transparent;border-radius:999px;padding:3px 10px;font:500 13px var(--font-body);cursor:pointer;color:inherit}.share-chip.on{background:var(--accent,#2b59c3);border-color:var(--accent,#2b59c3);color:#fff}.tag.shared{background:#eef3ff;color:#2b4a9a}
 .greet{font:700 26px/1.2 var(--font-head,var(--font-body));letter-spacing:-.01em;margin:2px 0 4px}
 .greet-sub{color:var(--muted,#667);font-size:14px;margin:0 0 14px}
 .dhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
@@ -758,7 +759,7 @@ h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spaci
 /* ---- équipe et droits ---- */
 body.ro-taches [data-act="new-task"],body.ro-taches [data-act="toggle-done"],
 body.ro-evenements [data-act="new-event"],body.ro-evenements [data-act="import"],
-body.ro-projets [data-act="new-project"],body.ro-idees #idea-form,body.member #rappels,body.member .rem-panel,body.member [data-act="settings"]{display:none!important}
+body.ro-projets [data-act="new-project"],body.ro-idees #idea-form{display:none!important}
 .ro-badge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--muted);font-size:12px;font-weight:600;vertical-align:middle}
 .team-list{display:flex;flex-direction:column;gap:12px}
 .team-card{border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
@@ -952,6 +953,8 @@ async function save(col,obj){
 }
 async function removeItem(col,id){
   if(mode==='supa'&&!canWrite(col,id)){roRefuse();return;}
+  if(mode==='supa'&&col==='tasks'&&S.tasks[id]&&!isMine(S.tasks[id])){const t=S.tasks[id];const c={...S.tasks};delete c[id];S.tasks=c;schedule();
+    const {error}=await sb.rpc('tk_leave_task',{p_owner:t._owner,p_id:id});if(error){toast('Action impossible pour le moment.');sbLoadAll().then(schedule).catch(()=>{});}return;}
   const c={...S[col]};delete c[id];S[col]=c;schedule();
   if(mode==='supa'){sbWrite(col,id,null);return;}
   if(mode==='cloud'){try{await enqueue(col+'/'+id,()=>refs[col].doc(id).delete());}catch(e){writeError(e);}}
@@ -986,27 +989,40 @@ let sb=null,sbUser=null,sbPending=0;const sbFailed=new Map();
 
 /* ---------- espace partagé : propriétaire, membres et droits ---------- */
 const FEATURES=[{k:'taches',l:'Tâches',d:'Tâches, Kanban, Chronologie'},{k:'evenements',l:'OP & événements',d:'OP, événements, Calendrier'},{k:'projets',l:'Projets',d:'Créer et modifier les projets'},{k:'idees',l:'Boîte à idées',d:'Idées'},{k:'agents',l:'Agents',d:'Récaps de Skout, Inbox, Echo'}];
-const LVL={none:0,read:1,edit:2};
-let wsOwner=null,isMember=false,myPerms={},teamRows=[];
-function can(f,lvl){if(mode!=='supa'||!isMember)return true;return (LVL[myPerms[f]]||0)>=lvl;}
+let wsOwner=null,isMember=false,myPerms={},teamRows=[],agOwner=null,teamPeople=[],teamOwnerName='';
+function can(f){if(mode!=='supa'||!isMember)return true;const v=myPerms[f];return !!v&&v!=='none';}
+const myId=()=>sbUser?sbUser.id:'';
+const isMine=t=>!t||!t._owner||t._owner===myId();
+const personName=id=>{const p=teamPeople.find(x=>x.user_id===id);return p?p.name:'quelqu’un';};
+const canShare=()=>mode==='supa'&&teamPeople.length>1;
 function colFeature(col,id){return col==='tasks'?'taches':col==='events'?'evenements':col==='projects'?'projets':col==='meta'?(id==='ideas'?'idees':'_owner'):'_owner';}
-function canWrite(col,id){const f=colFeature(col,id);return f==='_owner'?!isMember:can(f,2);}
+function canWrite(col,id){const f=colFeature(col,id);return f==='_owner'?true:can(f);}
 const VIEW_FEAT={taches:'taches',kanban:'taches',chronologie:'taches',calendrier:'evenements',evenements:'evenements',projets:'projets',idees:'idees',agents:'agents'};
-function viewAllowed(v){const f=VIEW_FEAT[v];return !f||can(f,1);}
-function applyPermClasses(){const b=document.body;b.classList.toggle('member',mode==='supa'&&isMember);FEATURES.forEach(f=>b.classList.toggle('ro-'+f.k,mode==='supa'&&isMember&&!can(f.k,2)));const tb=document.getElementById('team-btn');if(tb)tb.hidden=!(mode==='supa'&&!isMember);}
-function roRefuse(){toast('Accès en lecture seule : modification non enregistrée.');sbLoadAll().then(schedule).catch(()=>{});}
+function viewAllowed(v){const f=VIEW_FEAT[v];return !f||can(f);}
+function applyPermClasses(){const b=document.body;b.classList.toggle('member',mode==='supa'&&isMember);FEATURES.forEach(f=>b.classList.remove('ro-'+f.k));const tb=document.getElementById('team-btn');if(tb)tb.hidden=!(mode==='supa'&&!isMember);}
+function roRefuse(){toast('Ce module n’est pas activé sur ton compte.');sbLoadAll().then(schedule).catch(()=>{});}
 async function sbResolveWorkspace(user){
-  wsOwner=user.id;isMember=false;myPerms={};
+  wsOwner=user.id;agOwner=user.id;isMember=false;myPerms={};teamPeople=[];teamOwnerName='';
   let md=user.user_metadata||{};try{const r=await sb.auth.getUser();if(r.data&&r.data.user)md=r.data.user.user_metadata||md;}catch(e){}
   myName=(md.first_name||md.name||'').trim().split(/\s+/)[0]||'';
-  try{const {data}=await sb.from('tk_members').select('owner_id,perms,display_name').eq('member_id',user.id).maybeSingle();if(data){wsOwner=data.owner_id;isMember=true;myPerms=data.perms||{};if(data.display_name)myName=data.display_name.trim().split(/\s+/)[0];}}catch(e){}
+  try{const {data}=await sb.from('tk_members').select('owner_id,perms,display_name').eq('member_id',user.id).maybeSingle();if(data){agOwner=data.owner_id;isMember=true;myPerms=data.perms||{};if(data.display_name)myName=data.display_name.trim().split(/\s+/)[0];}}catch(e){}
+  try{const {data}=await sb.rpc('tk_team');teamPeople=Array.isArray(data)?data:[];const o=teamPeople.find(x=>x.is_owner);teamOwnerName=o?o.name:'';}catch(e){}
   ui._greet=null;
   applyPermClasses();
 }
 async function sbWrite(col,id,obj){
   const key=col+'/'+id;sbPending++;renderSide();
   try{
-    const {error}=await enqueue(key,()=>obj?sb.from(TABLE[col]).upsert({user_id:wsOwner,id,data:obj,updated_at:new Date().toISOString()},{onConflict:'user_id,id'}):sb.from(TABLE[col]).delete().eq('user_id',wsOwner).eq('id',id));
+    const now=new Date().toISOString();
+    const run=()=>{
+      if(col==='tasks'&&obj){
+        const data={...obj};delete data._owner;delete data.sharedWith;
+        if(!isMine(obj))return sb.from('tk_tasks').update({data,updated_at:now}).eq('user_id',obj._owner).eq('id',id);
+        return sb.from('tk_tasks').upsert({user_id:wsOwner,id,data,shared_with:(obj.sharedWith||[]).filter(x=>x!==wsOwner),updated_at:now},{onConflict:'user_id,id'});
+      }
+      return obj?sb.from(TABLE[col]).upsert({user_id:wsOwner,id,data:obj,updated_at:now},{onConflict:'user_id,id'}):sb.from(TABLE[col]).delete().eq('user_id',wsOwner).eq('id',id);
+    };
+    const {error}=await enqueue(key,run);
     if(error)throw error;
     sbFailed.delete(key);
   }catch(e){
@@ -1015,12 +1031,13 @@ async function sbWrite(col,id,obj){
   }finally{sbPending--;schedule();}
 }
 async function sbRetry(){if(!sb||!sbUser||!sbFailed.size)return;for(const [,f] of [...sbFailed]){await sbWrite(f.col,f.id,f.obj);}}
+function taskFromRow(r){const t={...(r.data||{})};t._owner=r.user_id;t.sharedWith=Array.isArray(r.shared_with)?r.shared_with:[];return t;}
 async function sbLoadAll(){
   const next={};
   for(const c of COLS){
     let rows=[],from=0;
-    for(;;){const {data,error}=await sb.from(TABLE[c]).select('id,data').eq('user_id',wsOwner).range(from,from+999);if(error)throw error;rows=rows.concat(data);if(data.length<1000)break;from+=1000;}
-    next[c]=Object.fromEntries(rows.map(r=>[r.id,r.data]));
+    for(;;){const q=c==='tasks'?sb.from('tk_tasks').select('id,data,user_id,shared_with'):sb.from(TABLE[c]).select('id,data').eq('user_id',wsOwner);const {data,error}=await q.range(from,from+999);if(error)throw error;rows=rows.concat(data);if(data.length<1000)break;from+=1000;}
+    next[c]=Object.fromEntries(rows.map(r=>[r.id,c==='tasks'?taskFromRow(r):r.data]));
   }
   // les modifications pas encore envoyées gardent la priorité
   sbFailed.forEach(f=>{if(f.obj)next[f.col][f.id]=f.obj;else delete next[f.col][f.id];});
@@ -1032,7 +1049,7 @@ const AGENTS=[{k:'Skout',c:'skout',l:'S',role:'Veille neige et stations pour le 
 let agReports=[],agMarking=false;
 function agSafeUrl(u){return typeof u==='string'&&/^https:\/\/claude\.ai\//.test(u)?u:'';}
 async function sbLoadAgents(){
-  const {data,error}=await sb.from('tk_agent_reports').select('id,agent,run_date,title,summary,items,alert,doc_url,is_read,created_at,body').eq('user_id',wsOwner).order('run_date',{ascending:false}).order('created_at',{ascending:false}).limit(300);
+  const {data,error}=await sb.from('tk_agent_reports').select('id,agent,run_date,title,summary,items,alert,doc_url,is_read,created_at,body').eq('user_id',agOwner).order('run_date',{ascending:false}).order('created_at',{ascending:false}).limit(300);
   if(error)throw error;
   agReports=data||[];
 }
@@ -1151,16 +1168,20 @@ async function startSupa(user){
   try{await sbLoadAgents();}catch(e){}
   ready=true;schedule();
   const ch=sb.channel('tk-'+wsOwner);
-  COLS.forEach(c=>ch.on('postgres_changes',{event:'*',schema:'public',table:TABLE[c],filter:`user_id=eq.${wsOwner}`},p=>{
+  COLS.forEach(c=>ch.on('postgres_changes',c==='tasks'?{event:'*',schema:'public',table:'tk_tasks'}:{event:'*',schema:'public',table:TABLE[c],filter:`user_id=eq.${wsOwner}`},p=>{
     if(p.eventType==='DELETE'){const id=p.old&&p.old.id;if(id&&!sbFailed.has(c+'/'+id)){const n={...S[c]};delete n[id];S[c]=n;}}
-    else if(p.new&&p.new.id&&!sbFailed.has(c+'/'+p.new.id))S[c]={...S[c],[p.new.id]:p.new.data};
+    else if(p.new&&p.new.id&&!sbFailed.has(c+'/'+p.new.id)){
+      if(c==='tasks'){const t=taskFromRow(p.new);const me=myId();if(t._owner===me||t.sharedWith.includes(me))S.tasks={...S.tasks,[t.id]:t};else{const n={...S.tasks};delete n[t.id];S.tasks=n;}}
+      else S[c]={...S[c],[p.new.id]:p.new.data};
+    }
     schedule();
   }));
-  ch.on('postgres_changes',{event:'*',schema:'public',table:'tk_agent_reports',filter:`user_id=eq.${wsOwner}`},()=>{sbLoadAgents().then(schedule).catch(()=>{});});
+  ch.on('postgres_changes',{event:'*',schema:'public',table:'tk_agent_reports',filter:`user_id=eq.${agOwner}`},()=>{sbLoadAgents().then(schedule).catch(()=>{});});
   ch.subscribe();
   window.addEventListener('focus',()=>{sbLoadAll().then(schedule).catch(()=>{});sbLoadAgents().then(schedule).catch(()=>{});});
   window.addEventListener('online',sbRetry);
   setInterval(sbRetry,15000);
+  setInterval(()=>{if(document.visibilityState==='visible'&&!sbFailed.size&&!sbPending)sbLoadAll().then(schedule).catch(()=>{});},90000);
   window.addEventListener('beforeunload',e=>{if(sbFailed.size||sbPending){e.preventDefault();e.returnValue='';}});
 }
 let loginMsg='',loginBusy=false;
@@ -1253,7 +1274,7 @@ function nextOccur(ds,r){
 function spawnNext(o){
   const base=o.due||today();let due=nextOccur(base,o.recur);while(due<today())due=nextOccur(due,o.recur);
   const shift=diff(base,due);
-  const n={...clone(o),id:newId(),num:nextNum(),status:'todo',due,start:o.start?addDays(o.start,shift):'',doneAt:null,recurNext:'',waitingFor:'',waitingSince:'',
+  const n={...clone(o),...(isMine(o)?{}:{_owner:undefined,sharedWith:[...new Set([...(o.sharedWith||[]).filter(x=>x!==myId()),o._owner])]}),id:newId(),num:nextNum(),status:'todo',due,start:o.start?addDays(o.start,shift):'',doneAt:null,recurNext:'',waitingFor:'',waitingSince:'',
     checklist:(o.checklist||[]).map(c=>({...c,id:newId(),done:false})),comments:[{id:newId(),sys:true,text:`Créée automatiquement (récurrence : ${RECUR[o.recur]})`,at:Date.now()}],createdAt:Date.now()};
   save('tasks',n);setTimeout(()=>toast(`Prochaine occurrence créée : ${tkey(n)} pour le ${dShort(due)}`),400);return n;
 }
@@ -1304,7 +1325,8 @@ function dueBadge(t){
 }
 function checkBtn(t){const on=t.status==='done';return `<button class="check ${on?'on':''}" data-act="toggle-done" data-id="${t.id}" aria-label="${on?'Rouvrir':'Terminer'} : ${esc(t.title)}">${on?CHECK_SVG:''}</button>`;}
 function clProg(t){const c=t.checklist||[];if(!c.length)return '';return `<span class="due" title="Sous-tâches">☑ ${c.filter(x=>x.done).length}/${c.length}</span>`;}
-function flags(t){return (t.recur&&RECUR_S[t.recur]&&t.status!=='done'?`<span class="tag recur" title="${esc(RECUR[t.recur])}">↻ ${RECUR_S[t.recur]}</span>`:'')+(isBlocked(t)?'<span class="blocked">Bloquée</span>':'')+(t.waitingFor&&t.status!=='done'?`<span class="waiting" title="En attente de : ${esc(t.waitingFor)}">⏳ ${esc(t.waitingFor)}</span>`:'')+(t.tags||[]).slice(0,2).map(x=>`<span class="tag">#${esc(x)}</span>`).join('');}
+function shareFlag(t){if(mode!=='supa')return '';const sw=t.sharedWith||[];if(!isMine(t))return `<span class="tag shared" title="Partagée par ${esc(personName(t._owner))}">👥 ${esc(personName(t._owner))}</span>`;return sw.length?`<span class="tag shared" title="Partagée avec ${esc(sw.map(personName).join(', '))}">👥 ${sw.length}</span>`:'';}
+function flags(t){return shareFlag(t)+(t.recur&&RECUR_S[t.recur]&&t.status!=='done'?`<span class="tag recur" title="${esc(RECUR[t.recur])}">↻ ${RECUR_S[t.recur]}</span>`:'')+(isBlocked(t)?'<span class="blocked">Bloquée</span>':'')+(t.waitingFor&&t.status!=='done'?`<span class="waiting" title="En attente de : ${esc(t.waitingFor)}">⏳ ${esc(t.waitingFor)}</span>`:'')+(t.tags||[]).slice(0,2).map(x=>`<span class="tag">#${esc(x)}</span>`).join('');}
 function taskRow(t,stack){
   return `<div class="trow ${stack===true?'stack':''} ${t.status==='done'?'is-done':''}" data-act="open-task" data-id="${t.id}" tabindex="0" role="button">
     ${checkBtn(t)}<span class="ttl">${esc(t.title)}</span>
@@ -1326,7 +1348,7 @@ function renderSide(){
   $('#nav').innerHTML=nav.filter(([k])=>viewAllowed(k)).map(([k,l,n])=>`<a href="#${k}" class="${ui.view===k?'on':''}" ${ui.view===k?'aria-current="page"':''}>${l}${n}</a>`).join('');
   const ps=projSorted();
   $('#plist').innerHTML=ps.length?ps.map(p=>`<button data-act="goto-project" data-id="${p.id}" class="${ui.view==='taches'&&ui.f.project===p.id?'on':''}" style="--pc:${esc(p.color)}"><span class="dot"></span><span class="nm">${esc(p.name)}</span><span class="n">${openTasks().filter(t=>t.projectId===p.id).length}</span></button>`).join(''):`<span style="padding:0 10px;font-size:13px;color:var(--side-muted)">Aucun projet</span>`;
-  if(mode==='supa'){$('#sync').innerHTML=sbFailed.size?`<span class="sync-dot local"></span><span>${sbFailed.size} modif. en attente d’envoi</span>`:sbPending?`<span class="sync-dot"></span><span>Enregistrement…</span>`:`<span class="sync-dot cloud"></span><span>Enregistré sur ton compte</span>`;$('#acct').hidden=false;$('#acct').innerHTML=`<span class="acct-mail">${esc(sbUser.email||'')}</span>${isMember?'<span class="ws-tag">Espace partagé · accès personnalisé</span>':''}<button data-act="logout">Se déconnecter</button>`;return;}
+  if(mode==='supa'){$('#sync').innerHTML=sbFailed.size?`<span class="sync-dot local"></span><span>${sbFailed.size} modif. en attente d’envoi</span>`:sbPending?`<span class="sync-dot"></span><span>Enregistrement…</span>`:`<span class="sync-dot cloud"></span><span>Enregistré sur ton compte</span>`;$('#acct').hidden=false;$('#acct').innerHTML=`<span class="acct-mail">${esc(sbUser.email||'')}</span>${isMember&&teamOwnerName?`<span class="ws-tag">Équipe de ${esc(teamOwnerName)}</span>`:''}<button data-act="logout">Se déconnecter</button>`;return;}
   $('#sync').innerHTML=mode==='cloud'?`<span class="sync-dot cloud"></span><span>Synchronisé · privé</span>`:mode==='local'?`<span class="sync-dot local"></span><span>Ce navigateur uniquement</span>`:`<span class="sync-dot"></span><span>Connexion…</span>`;
 }
 function noteHTML(){
@@ -1752,6 +1774,13 @@ function closeDrawer(){
   const ret=drawer.ret;drawer=null;droot.hidden=true;droot.innerHTML='';
   if(ret&&document.contains(ret))ret.focus();
 }
+function shareFieldHTML(t){
+  if(!canShare())return '';
+  if(!isMine(t)){const others=(t.sharedWith||[]).filter(x=>x!==myId());return `<span class="k">Partage</span><span class="share-f"><span class="hint">Partagée par <b>${esc(personName(t._owner))}</b>${others.length?' avec toi et '+esc(others.map(personName).join(', ')):' avec toi'}. Tu peux la modifier ; seul ${esc(personName(t._owner))} gère le partage.</span></span>`;}
+  const sw=t.sharedWith||[];
+  const chips=teamPeople.filter(p=>p.user_id!==myId()).map(p=>{const on=sw.includes(p.user_id);return `<button type="button" class="share-chip ${on?'on':''}" data-share="${esc(p.user_id)}" aria-pressed="${on}">${on?'✓ ':''}${esc(p.name)}</button>`;}).join('');
+  return `<span class="k">Partage</span><span class="share-f">${chips}<span class="hint">${sw.length?'Visible et modifiable par les personnes cochées.':'🔒 Privée : visible par toi seul.'}</span></span>`;
+}
 function renderDrawer(focusTitle){
   const t=drawer.t,T=today();
   const active=document.activeElement&&document.activeElement.id;
@@ -1763,7 +1792,7 @@ function renderDrawer(focusTitle){
   <aside class="drawer" role="dialog" aria-modal="true" aria-label="Détail de la tâche">
     <div class="dr-top"><span class="tid" style="font-size:13px">${tkey(t)}</span>
       <label class="sr" for="d-project">Projet</label><select id="d-project" data-df="projectId">${projectOptions(t.projectId)}</select>
-      <span class="spacer"></span>${drawer.isNew?'':'<button class="btn sm danger-ghost" id="d-del">Supprimer</button>'}<button class="icon-btn" data-close-drawer aria-label="Fermer">×</button></div>
+      <span class="spacer"></span>${drawer.isNew?'':isMine(t)?'<button class="btn sm danger-ghost" id="d-del">Supprimer</button>':'<button class="btn sm danger-ghost" id="d-del">Ne plus suivre</button>'}<button class="icon-btn" data-close-drawer aria-label="Fermer">×</button></div>
     <div class="dr-body">
       <div><label class="sr" for="d-title">Titre</label><textarea id="d-title" class="dr-title" rows="1" placeholder="Titre de la tâche (Entrée pour créer)">${esc(t.title)}</textarea>
       ${drawer.isNew?'<p class="hint">Saisis un titre puis appuie sur Entrée : la tâche est créée et chaque modification est enregistrée automatiquement.</p>':''}</div>
@@ -1773,6 +1802,7 @@ function renderDrawer(focusTitle){
         <span class="k">Dates</span><span class="dates"><label class="sr" for="d-start">Début</label><input type="date" id="d-start" data-df="start" value="${esc(t.start||'')}" title="Début"><span class="due">→</span><label class="sr" for="d-due">Échéance</label><input type="date" id="d-due" data-df="due" value="${esc(t.due||'')}" title="Échéance">${t.due?`<span class="due ${late?'late':''}">${t.status==='done'?'':rel(t.due)}</span>`:''}</span>
         <label for="d-recur">Récurrence</label><span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="d-recur" data-df="recur">${opt('','Aucune',t.recur||'')}${Object.entries(RECUR).map(([k,l])=>opt(k,l,t.recur||'')).join('')}</select>${t.recur?`<span class="hint">À la fin, la suivante est créée toute seule${t.due?' pour le '+dShort(nextOccur(t.due,t.recur)):''}</span>`:''}</span>
         <label for="d-event">OP liée</label><span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select id="d-event" data-df="eventId">${evOpts}</select>${t.projectId&&!list('events').some(e=>isOp(e)&&(e.projectId||'')===t.projectId)?`<span class="hint">Aucune OP dans ce projet</span>`:''}</span>
+        ${shareFieldHTML(t)}
         <label for="d-tags">Étiquettes</label><input id="d-tags" data-df="tags" value="${esc(t.tags.join(', '))}" placeholder="ex. mailing, seo">
         <span class="k">Bloquée par</span><span class="deps">${t.blockedBy.map(id=>{const b=S.tasks[id];return b?`<span class="dep ${b.status==='done'?'ok':''}">${esc(tkey(b)+' · '+b.title)}<button data-dep-del="${id}" aria-label="Retirer la dépendance">×</button></span>`:'';}).join('')}<label class="sr" for="d-dep">Ajouter une dépendance</label><select id="d-dep" style="max-width:260px">${depOpts}</select></span>
         <label for="d-wait">En attente de</label><span class="wait-f"><input id="d-wait" data-df="waitingFor" list="d-wait-list" maxlength="120" value="${esc(t.waitingFor||'')}" placeholder="Personne ou chose (ex. validation de la direction, retour de l’IT)"><datalist id="d-wait-list">${[...new Set(list('tasks').map(x=>x.waitingFor).filter(Boolean))].slice(0,30).map(v=>`<option value="${esc(v)}"></option>`).join('')}</datalist>${t.waitingFor&&t.waitingSince?`<span class="due ${diff(t.waitingSince,T)>=3?'soon':''}">${diff(t.waitingSince,T)<=0?'depuis aujourd’hui':'depuis '+diff(t.waitingSince,T)+' j'}</span>`:''}</span>
@@ -1823,6 +1853,8 @@ function drawerClick(e){
   const dd=e.target.closest('[data-dep-del]');if(dd){t.blockedBy=t.blockedBy.filter(x=>x!==dd.dataset.depDel);commitDrawer();renderDrawer();return true;}
   if(e.target.closest('#d-cl-add')){addCl();return true;}
   if(e.target.closest('#d-com-add')){addCom();return true;}
+  const shb=e.target.closest('[data-share]');if(shb&&isMine(t)){const u=shb.dataset.share;const sw=new Set(t.sharedWith||[]);sw.has(u)?sw.delete(u):sw.add(u);t.sharedWith=[...sw];if(!drawer.isNew&&t.title.trim())commitDrawer();renderDrawer();return true;}
+  if(e.target.closest('#d-del')&&!isMine(t)){confirmBox('Ne plus suivre cette tâche ?',`${tkey(t)} « ${t.title} » disparaîtra de ton espace. Elle reste chez ${personName(t._owner)}.`).then(ok=>{if(ok){removeItem('tasks',t.id);drawer.isNew=true;drawer.t.title='';closeDrawer();toast('Tâche retirée de ton espace');}});return true;}
   if(e.target.closest('#d-del')){confirmBox('Supprimer la tâche ?',`${tkey(t)} « ${t.title} » sera supprimée définitivement.`).then(ok=>{if(ok){removeItem('tasks',t.id);list('tasks').filter(x=>(x.blockedBy||[]).includes(t.id)).forEach(x=>save('tasks',{...x,blockedBy:x.blockedBy.filter(y=>y!==t.id)}));drawer.isNew=true;drawer.t.title='';closeDrawer();toast('Tâche supprimée');}});return true;}
   return false;
 }
@@ -1980,8 +2012,8 @@ function dayModal(ds){
 /* --- paramètres --- */
 
 function permSelect(id,f,val){return `<select id="${id}" data-perm="${f}">${[['none','Aucun accès'],['read','Lecture'],['edit','Modification']].map(([v,l])=>`<option value="${v}" ${val===v?'selected':''}>${l}</option>`).join('')}</select>`;}
-function permGrid(prefix,perms){return `<div class="perm-grid">${FEATURES.map(f=>`<label title="${esc(f.d)}">${esc(f.l)}${permSelect(prefix+f.k,f.k,(perms||{})[f.k]||'none')}</label>`).join('')}</div>`;}
-function readPerms(root){const o={};root.querySelectorAll('select[data-perm]').forEach(x=>o[x.dataset.perm]=x.value);return o;}
+function permGrid(prefix,perms){return `<div class="perm-grid">${FEATURES.map(f=>{const v=(perms||{})[f.k];const on=!!v&&v!=='none';return `<label class="inline-check" title="${esc(f.d)}"><input type="checkbox" id="${prefix+f.k}" data-perm="${f.k}" ${on?'checked':''}> ${esc(f.l)}${f.k==='agents'?' <span class="hint">(tes récaps, en lecture)</span>':''}</label>`;}).join('')}</div>`;}
+function readPerms(root){const o={};root.querySelectorAll('input[data-perm]').forEach(x=>o[x.dataset.perm]=x.checked?'edit':'none');return o;}
 async function teamCall(payload){
   const {data,error}=await sb.functions.invoke('kairn-members',{body:payload});
   if(error){let m='Action impossible pour le moment.';try{const j=await error.context.json();if(j&&j.error)m=j.error;}catch(e){}throw new Error(m);}
@@ -1995,10 +2027,10 @@ async function teamModal(){
   const cards=teamRows.map(m=>`<div class="team-card" data-mid="${esc(m.member_id)}">
       <div class="team-head"><b>${esc(m.display_name||m.email)}</b><span class="m">${esc(m.email)}</span></div>
       ${permGrid('p-'+m.member_id.slice(0,8)+'-',m.perms)}
-      <div class="team-acts"><button type="button" class="btn sm primary" data-team="save">Enregistrer les droits</button><button type="button" class="btn sm" data-team="pass">Nouveau mot de passe</button><button type="button" class="btn sm" data-team="del">Supprimer le compte</button></div>
+      <div class="team-acts"><button type="button" class="btn sm primary" data-team="save">Enregistrer les modules</button><button type="button" class="btn sm" data-team="pass">Nouveau mot de passe</button><button type="button" class="btn sm" data-team="del">Supprimer le compte</button></div>
     </div>`).join('');
   openModal({title:'Équipe et accès',size:'wide',body:`<div class="form">
-      <p class="hint">Les personnes que tu ajoutes se connectent à Kairn avec leur e-mail et accèdent à <b>ton</b> espace, uniquement aux fonctionnalités autorisées. Tes rappels et tes paramètres restent privés.</p>
+      <p class="hint">Chaque personne que tu ajoutes a <b>son propre espace</b> : ses tâches, OP, projets et idées. Vous ne voyez pas les données des autres, sauf les tâches que vous partagez entre vous (champ « Partage » d'une tâche). Coche les modules qu'elle peut utiliser ; « Agents » lui montre tes récaps Skout, Inbox et Echo en lecture.</p>
       <div class="team-list">${cards||'<div class="empty-line">Personne pour l’instant.</div>'}</div>
       <h3 style="margin:18px 0 6px">Créer un compte</h3>
       <div class="team-card" id="t-new">
@@ -2007,7 +2039,7 @@ async function teamModal(){
           <label>E-mail<input id="t-email" type="email" autocomplete="off" required></label>
           <label>Mot de passe provisoire<input id="t-pass" autocomplete="off" minlength="8" value="${genPass()}"></label>
         </div>
-        ${permGrid('n-',{taches:'read',evenements:'read',projets:'read',idees:'none',agents:'read'})}
+        ${permGrid('n-',{taches:'edit',evenements:'edit',projets:'edit',idees:'edit',agents:'edit'})}
         <div class="team-acts"><button type="button" class="btn primary" id="t-create">Créer le compte</button></div>
         <p class="hint">Transmets l’e-mail et le mot de passe provisoire à la personne, avec l’adresse de Kairn. Elle se connecte directement, sans e-mail de confirmation.</p>
       </div></div>`,foot:`<span class="spacer"></span><button class="btn" data-close>Fermer</button>`});
@@ -2022,9 +2054,9 @@ async function teamModal(){
   };
   root.querySelectorAll('.team-card[data-mid]').forEach(card=>{
     const mid=card.dataset.mid,row=teamRows.find(r=>r.member_id===mid);
-    card.querySelector('[data-team="save"]').onclick=async()=>{const {error}=await sb.from('tk_members').update({perms:readPerms(card)}).eq('owner_id',sbUser.id).eq('member_id',mid);toast(error?'Enregistrement impossible.':'Droits mis à jour.');};
+    card.querySelector('[data-team="save"]').onclick=async()=>{const {error}=await sb.from('tk_members').update({perms:readPerms(card)}).eq('owner_id',sbUser.id).eq('member_id',mid);toast(error?'Enregistrement impossible.':'Modules mis à jour.');};
     card.querySelector('[data-team="pass"]').onclick=async()=>{const pw=genPass();try{await teamCall({action:'reset_password',member_id:mid,password:pw});openModal({title:'Nouveau mot de passe',size:'small',body:`<p>Nouveau mot de passe provisoire pour <b>${esc(row.email)}</b> :</p><p style="font:600 16px var(--font-mono);user-select:all">${esc(pw)}</p><p class="hint">Copie-le maintenant : il ne sera plus affiché.</p>`,foot:`<span class="spacer"></span><button class="btn primary" data-close>OK</button>`});}catch(e){toast(e.message);}};
-    card.querySelector('[data-team="del"]').onclick=()=>confirmBox('Supprimer ce compte ?',`${row.email} perdra tout accès à Kairn. Tes données ne sont pas touchées.`).then(async ok=>{if(!ok)return;try{await teamCall({action:'delete',member_id:mid});toast('Compte supprimé.');teamModal();}catch(e){toast(e.message);}});
+    card.querySelector('[data-team="del"]').onclick=()=>confirmBox('Supprimer ce compte ?',`${row.email} perdra tout accès à Kairn et son espace ne sera plus accessible. Tes données ne sont pas touchées ; vos tâches partagées restent chez leur créateur.`).then(async ok=>{if(!ok)return;try{await teamCall({action:'delete',member_id:mid});toast('Compte supprimé.');teamModal();}catch(e){toast(e.message);}});
   });
 }
 function settingsModal(){
