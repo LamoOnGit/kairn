@@ -158,6 +158,7 @@ h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spaci
 .as-chip{display:inline-flex;align-items:center;gap:6px;border:1px dashed #b7bfcc;background:#fff;border-radius:999px;padding:3px 10px 3px 3px;font:500 13px var(--font-body);color:inherit;cursor:pointer}.as-chip:hover{border-color:#2b59c3}.as-chip.on{border:1px solid #2b59c3;background:#2b59c3;color:#fff}.as-chip.me{border-style:solid;cursor:default;background:#fff}.as-x{font-weight:700;opacity:.7;margin-left:2px}
 .av{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#dfe5f2;color:#2b3a5c;font:700 10px var(--font-body)}.av.owner{background:#2b59c3;color:#fff}.as-chip.on .av{background:#fff;color:#2b59c3}
 .assign.empty{border-color:var(--danger,#d33)}.as-chip.ro{cursor:default;border-style:solid}.d-create{display:flex;align-items:center;gap:12px;margin:12px 0 4px;flex-wrap:wrap}.d-create .hint{flex:1;min-width:200px;margin:0}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent,#2b59c3);text-decoration:underline;cursor:pointer;font:inherit}
 .greet{font:700 26px/1.2 var(--font-head,var(--font-body));letter-spacing:-.01em;margin:2px 0 4px}
 .greet-sub{color:var(--muted,#667);font-size:14px;margin:0 0 14px}
 .dhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
@@ -1762,8 +1763,14 @@ function confirmBox(title,text,ok='Supprimer'){
 
 /* --- panneau tâche (façon Wrike) --- */
 let drawer=null;
+const draftKey=()=>'kairn-draft-'+(myId()||'local');
+function loadDraft(){try{const d=JSON.parse(localStorage.getItem(draftKey())||'null');return d&&d.t?d:null;}catch(e){return null;}}
+function saveDraft(t){try{localStorage.setItem(draftKey(),JSON.stringify({t,at:Date.now()}));}catch(e){}}
+function clearDraft(){try{localStorage.removeItem(draftKey());}catch(e){}}
+const draftHasContent=t=>!!(t&&((t.title||'').trim()||(t.desc||'').trim()||(t.checklist||[]).length||(t.comments||[]).length||(t.tags||[]).length||t.due||t.start));
 function openTask(id,preset={}){
   const ex=id&&S.tasks[id];
+  if(!ex&&!Object.values(preset||{}).some(v=>v)){const d=loadDraft();if(d&&draftHasContent(d.t)){const t={...d.t,id:newId(),num:nextNum()};['tags','blockedBy','checklist','comments'].forEach(k=>{if(!Array.isArray(t[k]))t[k]=[];});if(droot.hidden)drawer={t,isNew:true,ret:document.activeElement,fromDraft:true};else drawer={...drawer,t,isNew:true,fromDraft:true};renderDrawer(true);return;}}
   const dp=preset.projectId??(preset.eventId&&S.events[preset.eventId]?S.events[preset.eventId].projectId:(ui.f.project!=='all'&&ui.f.project!=='none'?ui.f.project:''));
   const t=ex?clone(ex):{id:newId(),num:nextNum(),title:'',desc:'',projectId:dp||'',status:preset.status||'todo',priority:'normal',start:'',due:preset.due||'',eventId:preset.eventId||'',tags:[],blockedBy:[],checklist:[],comments:[],createdAt:Date.now()};
   ['tags','blockedBy','checklist','comments'].forEach(k=>{if(!Array.isArray(t[k]))t[k]=[];});
@@ -1775,7 +1782,7 @@ function commitDrawer(create){
   if(drawer.isNew&&!create)return false;
   if(!t.title.trim()){if(create){toast('Donne un titre à la tâche.');const ta=$('#d-title');if(ta)ta.focus();}return false;}
   if(drawer.isNew&&mode==='supa'){const c=chargesOf(t);if(!c.length){toast('Choisis au moins un chargé de mission.');return false;}t.charges=c;t.sharedWith=c.filter(x=>x!==myId());}
-  const first=drawer.isNew;drawer.isNew=false;
+  const first=drawer.isNew;drawer.isNew=false;if(first)clearDraft();
   save('tasks',t);
   if(first)toast(`${tkey(t)} créée`);
   return true;
@@ -1784,7 +1791,7 @@ function closeDrawer(){
   if(!drawer)return;
   const t=drawer.t;
   const ta=$('#d-title');if(ta)t.title=ta.value.trim();const de=$('#d-desc');if(de)t.desc=de.value;
-  if(drawer.isNew&&t.title){confirmBox('Créer cette tâche ?',`« ${t.title} » n’a pas encore été créée.`,'Créer la tâche').then(ok=>{if(ok&&drawer&&commitDrawer(true))closeDrawer();else if(!ok&&drawer){drawer.isNew=true;drawer.t.title='';closeDrawer();}});return;}
+  if(drawer.isNew){if(draftHasContent(t)){saveDraft(t);toast('Brouillon gardé : clique sur « + Tâche » pour le reprendre.');}else clearDraft();}
   if(!drawer.isNew&&t.title&&JSON.stringify({...t,updatedAt:0})!==JSON.stringify({...(S.tasks[t.id]||{}),updatedAt:0}))commitDrawer();
   const ret=drawer.ret;drawer=null;droot.hidden=true;droot.innerHTML='';
   if(ret&&document.contains(ret))ret.focus();
@@ -1818,11 +1825,11 @@ function renderDrawer(focusTitle){
   <aside class="drawer" role="dialog" aria-modal="true" aria-label="Détail de la tâche">
     <div class="dr-top"><span class="tid" style="font-size:13px">${tkey(t)}</span>
       <label class="sr" for="d-project">Projet</label><select id="d-project" data-df="projectId">${projectOptions(t.projectId)}</select>
-      <span class="spacer"></span>${drawer.isNew?'':isMine(t)?'<button class="btn sm danger-ghost" id="d-del">Supprimer</button>':'<button class="btn sm danger-ghost" id="d-del">Ne plus suivre</button>'}<button class="icon-btn" data-close-drawer aria-label="Fermer">×</button></div>
+      <span class="spacer"></span>${drawer.isNew?'<button type="button" class="btn sm primary" id="d-create">Créer la tâche</button>':isMine(t)?'<button class="btn sm danger-ghost" id="d-del">Supprimer</button>':'<button class="btn sm danger-ghost" id="d-del">Ne plus suivre</button>'}<button class="icon-btn" data-close-drawer aria-label="Fermer">×</button></div>
     <div class="dr-body">
-      <div><label class="sr" for="d-title">Titre</label><textarea id="d-title" class="dr-title" rows="1" placeholder="Titre de la tâche (Entrée pour créer)">${esc(t.title)}</textarea>
+      <div><label class="sr" for="d-title">Titre</label><textarea id="d-title" class="dr-title" rows="1" placeholder="Titre de la tâche">${esc(t.title)}</textarea>
       ${shareFieldHTML(t)}
-      ${drawer.isNew?'<div class="d-create"><button type="button" class="btn primary" id="d-create">Créer la tâche</button><span class="hint">Remplis ce dont tu as besoin puis crée la tâche. Ensuite, chaque modification est enregistrée automatiquement.</span></div>':''}</div>
+      ${drawer.isNew?`<p class="hint d-draft">${drawer.fromDraft?'📝 Brouillon repris. <button type="button" class="linkbtn" id="d-discard">Effacer le brouillon</button> · ':''}Remplis ce dont tu as besoin puis clique sur « Créer la tâche » en haut à droite. Si tu fermes le volet, la tâche est gardée en brouillon.</p>`:''}</div>
       <div class="dr-fields">
         <label for="d-status">Statut</label><select id="d-status" data-df="status" class="st-${t.status}" style="font-weight:600">${STATUSES.map(s=>opt(s.k,s.l,t.status)).join('')}</select>
         <label for="d-prio">Priorité</label><select id="d-prio" data-df="priority" class="prio-${t.priority}" style="font-weight:600">${PRIOS.map(p=>opt(p.k,p.l,t.priority)).join('')}</select>
@@ -1884,6 +1891,7 @@ function drawerClick(e){
     if(!c.size&&!drawer.isNew){toast('Il faut au moins un chargé de mission.');return true;}
     t.charges=[...c];t.sharedWith=t.charges.filter(x=>x!==myId());const ta=$('#d-title');if(ta&&drawer.isNew)t.title=ta.value.trim();
     if(!drawer.isNew)commitDrawer();renderDrawer();return true;}
+  if(e.target.closest('#d-discard')){clearDraft();drawer.isNew=true;const keep=drawer.ret;drawer.t={id:t.id,num:t.num,title:'',desc:'',projectId:'',status:'todo',priority:'normal',start:'',due:'',eventId:'',tags:[],blockedBy:[],checklist:[],comments:[],createdAt:Date.now()};drawer.fromDraft=false;drawer.ret=keep;renderDrawer(true);toast('Brouillon effacé');return true;}
   if(e.target.closest('#d-create')){const ta=$('#d-title');if(ta)t.title=ta.value.trim();const de=$('#d-desc');if(de)t.desc=de.value;if(commitDrawer(true))renderDrawer();return true;}
   if(e.target.closest('#d-del')&&!isMine(t)){confirmBox('Ne plus suivre cette tâche ?',`${tkey(t)} « ${t.title} » disparaîtra de ton espace. Elle reste chez ${personName(t._owner)}.`).then(ok=>{if(ok){removeItem('tasks',t.id);drawer.isNew=true;drawer.t.title='';closeDrawer();toast('Tâche retirée de ton espace');}});return true;}
   if(e.target.closest('#d-del')){confirmBox('Supprimer la tâche ?',`${tkey(t)} « ${t.title} » sera supprimée définitivement.`).then(ok=>{if(ok){removeItem('tasks',t.id);list('tasks').filter(x=>(x.blockedBy||[]).includes(t.id)).forEach(x=>save('tasks',{...x,blockedBy:x.blockedBy.filter(y=>y!==t.id)}));drawer.isNew=true;drawer.t.title='';closeDrawer();toast('Tâche supprimée');}});return true;}
