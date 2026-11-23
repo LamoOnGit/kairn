@@ -150,6 +150,8 @@ h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spaci
 .check svg{width:12px;height:12px}
 
 /* tableau de bord */
+.greet{font:700 26px/1.2 var(--font-head,var(--font-body));letter-spacing:-.01em;margin:2px 0 4px}
+.greet-sub{color:var(--muted,#667);font-size:14px;margin:0 0 14px}
 .dhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .dhead .date{font:600 15px var(--font-body);text-transform:capitalize;margin-right:8px}
 .kchip{all:unset;cursor:pointer;display:inline-flex;align-items:baseline;gap:6px;padding:4px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:13px;color:var(--muted)}
@@ -958,6 +960,28 @@ async function removeItem(col,id){
 /* ---------- stockage Supabase (version locale) ---------- */
 const SUPA_URL='https://ghjwmouqqildwyhyvsct.supabase.co',SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdoandtb3VxcWlsZHd5aHl2c2N0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUwNzE3ODMsImV4cCI6MjExMDY0Nzc4M30._vSzKgoU73QmaRvz-7uX8YSppqqvq7C0xPsvttCztZ4';
 const TABLE={projects:'tk_projects',tasks:'tk_tasks',events:'tk_events',meta:'tk_meta'};
+let myName='';
+const GREETS={
+  matin:['Bonjour {n} ☀️','Bien dormi, {n} ?','Salut {n}, prêt pour la journée ?','Hello {n} !','Bonjour {n}, café d’abord ?','Belle matinée, {n}'],
+  aprem:['Rebonjour {n} 👋','Bon après-midi, {n}','Te revoilà, {n} !','Hello {n}, on avance ?','Re {n} !','Ça avance, {n} ?'],
+  soir:['Bonsoir {n} 🌙','Encore là, {n} ?','Bonne soirée, {n}','Dernière ligne droite, {n}','Re {n}, on boucle ?'],
+  lundi:['Bon lundi, {n} !','Nouvelle semaine, {n} 💪'],
+  vendredi:['Bon vendredi, {n} !','Presque le week-end, {n} 🎿'],
+  weekend:['Bon week-end, {n} !','Même le week-end, {n} ?']
+};
+const GSUBS=['Voici où tu en es.','Tout est là, prêt à attaquer.','Le point sur ta journée.','Un coup d’œil et c’est parti.','Voilà ce qui t’attend.','On fait le point ?'];
+function pickGreet(){
+  const d=new Date(),h=d.getHours(),wd=d.getDay();
+  let pool=h<12?GREETS.matin:h<18?GREETS.aprem:GREETS.soir;
+  if(wd===0||wd===6)pool=pool.concat(GREETS.weekend);else if(wd===1&&h<14)pool=pool.concat(GREETS.lundi);else if(wd===5)pool=pool.concat(GREETS.vendredi);
+  let last='';try{last=localStorage.getItem('kairn-greet')||'';}catch(e){}
+  const opts=pool.filter(g=>g!==last);const g=opts[Math.floor(Math.random()*opts.length)]||pool[0];
+  try{localStorage.setItem('kairn-greet',g);}catch(e){}
+  let sub=GSUBS[Math.floor(Math.random()*GSUBS.length)];
+  const n=myName?esc(myName):'';
+  let t=g.replace('{n}',n);if(!n)t=t.replace(/\s+([,!?])/g,'$1').replace(/,\s*$/,'').replace(/^(\S+),\s/,'$1 ').trim();
+  return {t,sub};
+}
 let sb=null,sbUser=null,sbPending=0;const sbFailed=new Map();
 
 /* ---------- espace partagé : propriétaire, membres et droits ---------- */
@@ -973,7 +997,10 @@ function applyPermClasses(){const b=document.body;b.classList.toggle('member',mo
 function roRefuse(){toast('Accès en lecture seule : modification non enregistrée.');sbLoadAll().then(schedule).catch(()=>{});}
 async function sbResolveWorkspace(user){
   wsOwner=user.id;isMember=false;myPerms={};
-  try{const {data}=await sb.from('tk_members').select('owner_id,perms').eq('member_id',user.id).maybeSingle();if(data){wsOwner=data.owner_id;isMember=true;myPerms=data.perms||{};}}catch(e){}
+  let md=user.user_metadata||{};try{const r=await sb.auth.getUser();if(r.data&&r.data.user)md=r.data.user.user_metadata||md;}catch(e){}
+  myName=(md.first_name||md.name||'').trim().split(/\s+/)[0]||'';
+  try{const {data}=await sb.from('tk_members').select('owner_id,perms,display_name').eq('member_id',user.id).maybeSingle();if(data){wsOwner=data.owner_id;isMember=true;myPerms=data.perms||{};if(data.display_name)myName=data.display_name.trim().split(/\s+/)[0];}}catch(e){}
+  ui._greet=null;
   applyPermClasses();
 }
 async function sbWrite(col,id,obj){
@@ -1401,7 +1428,9 @@ function viewDashboard(){
   const T=today(),in7=addDays(T,7),open=openTasks();
   const late=open.filter(t=>t.due&&t.due<T),week=open.filter(t=>t.due&&t.due>=T&&t.due<=in7),urg=open.filter(t=>PRANK[t.priority]<=1&&(!t.due||t.due<=in7));
   const k=(cls,v,l,a)=>`<button class="kchip ${cls}" data-act="kpi" data-k="${a}"><b>${v}</b>${l}</button>`;
+  if(!ui._greet)ui._greet=pickGreet();
   return `
+  <h2 class="greet">${ui._greet.t}</h2><p class="greet-sub">${ui._greet.sub}</p>
   <div class="dhead"><span class="date">${dLong(T)}</span>
     ${late.length?k('alert',late.length,'en retard','late'):''}${k('',week.length,'à rendre cette semaine','week')}${urg.length?k('',urg.length,'urgentes','urgent'):''}${(()=>{const n=remindersCount();return n?`<button class="kchip" data-act="goto-rem"><b>${n}</b>rappel${n>1?'s':''}</button>`:'';})()}
   </div>
@@ -2525,7 +2554,7 @@ document.addEventListener('dragend',e=>{const c=e.target.closest&&e.target.close
 document.addEventListener('dragover',e=>{const col=e.target.closest&&e.target.closest('.kcol');if(!col||!dragId)return;e.preventDefault();document.querySelectorAll('.kcol.over').forEach(x=>x!==col&&x.classList.remove('over'));col.classList.add('over');});
 document.addEventListener('drop',e=>{const col=e.target.closest&&e.target.closest('.kcol');if(!col||!dragId)return;e.preventDefault();const t=S.tasks[dragId],s=col.dataset.status;if(t&&t.status!==s){save('tasks',withStatus(t,s));toast(`${tkey(t)} → ${st(s).l}`);}col.classList.remove('over');dragId=null;});
 
-function route(){const h=location.hash.slice(1);ui.view=VIEWS[h]&&viewAllowed(h)?h:'dashboard';schedule();}
+function route(){const h=location.hash.slice(1);const prev=ui.view;ui.view=VIEWS[h]&&viewAllowed(h)?h:'dashboard';if(ui.view==='dashboard'&&prev!=='dashboard')ui._greet=null;schedule();}
 window.addEventListener('hashchange',route);
 route();init();
 })();
