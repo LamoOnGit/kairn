@@ -151,6 +151,7 @@ h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spaci
 
 /* tableau de bord */
 .share-f{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.share-chip{border:1px solid var(--line,#d8dce5);background:transparent;border-radius:999px;padding:3px 10px;font:500 13px var(--font-body);cursor:pointer;color:inherit}.share-chip.on{background:var(--accent,#2b59c3);border-color:var(--accent,#2b59c3);color:#fff}.tag.shared{background:#eef3ff;color:#2b4a9a}
+.pw-force{position:fixed;inset:0;z-index:9999;background:rgba(15,18,30,.72);display:flex;align-items:center;justify-content:center;padding:16px}.pw-card{background:var(--bg,#fff);color:inherit;border-radius:14px;padding:24px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35)}.pw-card h2{margin:0 0 6px}.creds{white-space:pre-wrap;font:13px/1.5 var(--font-mono,monospace);background:var(--soft,#f3f5f9);padding:10px 12px;border-radius:8px;user-select:all}
 .greet{font:700 26px/1.2 var(--font-head,var(--font-body));letter-spacing:-.01em;margin:2px 0 4px}
 .greet-sub{color:var(--muted,#667);font-size:14px;margin:0 0 14px}
 .dhead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
@@ -963,7 +964,7 @@ async function removeItem(col,id){
 /* ---------- stockage Supabase (version locale) ---------- */
 const SUPA_URL='https://ghjwmouqqildwyhyvsct.supabase.co',SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdoandtb3VxcWlsZHd5aHl2c2N0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUwNzE3ODMsImV4cCI6MjExMDY0Nzc4M30._vSzKgoU73QmaRvz-7uX8YSppqqvq7C0xPsvttCztZ4';
 const TABLE={projects:'tk_projects',tasks:'tk_tasks',events:'tk_events',meta:'tk_meta'};
-let myName='';
+let myName='',mustChangePw=false;
 const GREETS={
   matin:['Bonjour {n} ☀️','Bien dormi, {n} ?','Salut {n}, prêt pour la journée ?','Hello {n} !','Bonjour {n}, café d’abord ?','Belle matinée, {n}'],
   aprem:['Rebonjour {n} 👋','Bon après-midi, {n}','Te revoilà, {n} !','Hello {n}, on avance ?','Re {n} !','Ça avance, {n} ?'],
@@ -1004,7 +1005,7 @@ function roRefuse(){toast('Ce module n’est pas activé sur ton compte.');sbLoa
 async function sbResolveWorkspace(user){
   wsOwner=user.id;agOwner=user.id;isMember=false;myPerms={};teamPeople=[];teamOwnerName='';
   let md=user.user_metadata||{};try{const r=await sb.auth.getUser();if(r.data&&r.data.user)md=r.data.user.user_metadata||md;}catch(e){}
-  myName=(md.first_name||md.name||'').trim().split(/\s+/)[0]||'';
+  myName=(md.first_name||md.name||'').trim().split(/\s+/)[0]||'';mustChangePw=!!md.must_change_password;
   try{const {data}=await sb.from('tk_members').select('owner_id,perms,display_name').eq('member_id',user.id).maybeSingle();if(data){agOwner=data.owner_id;isMember=true;myPerms=data.perms||{};if(data.display_name)myName=data.display_name.trim().split(/\s+/)[0];}}catch(e){}
   try{const {data}=await sb.rpc('tk_team');teamPeople=Array.isArray(data)?data:[];const o=teamPeople.find(x=>x.is_owner);teamOwnerName=o?o.name:'';}catch(e){}
   ui._greet=null;
@@ -1168,6 +1169,7 @@ async function startSupa(user){
   try{await sbLoadAll();netNote='';}catch(e){netNote='Impossible de lire tes données sur Supabase. Vérifie ta connexion puis recharge la page.';}
   try{await sbLoadAgents();}catch(e){}
   ready=true;schedule();
+  if(mustChangePw)setTimeout(forcePwChange,300);
   const ch=sb.channel('tk-'+wsOwner);
   COLS.forEach(c=>ch.on('postgres_changes',c==='tasks'?{event:'*',schema:'public',table:'tk_tasks'}:{event:'*',schema:'public',table:TABLE[c],filter:`user_id=eq.${wsOwner}`},p=>{
     if(p.eventType==='DELETE'){const id=p.old&&p.old.id;if(id&&!sbFailed.has(c+'/'+id)){const n={...S[c]};delete n[id];S[c]=n;}}
@@ -1198,14 +1200,14 @@ function loginHTML(){
     </form></div>`;
 }
 async function doLogin(signup){
-  const email=$('#lg-email').value.trim(),password=$('#lg-pass').value;
+  const email=$('#lg-email').value.trim().toLowerCase(),password=$('#lg-pass').value.trim();
   if(!email||password.length<6){loginMsg='Saisis ton e-mail et un mot de passe d’au moins 6 caractères.';schedule();return;}
   loginBusy=true;loginMsg='';schedule();
   let r;
   try{r=signup?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});}catch(e){r={error:e};}
   loginBusy=false;
   if(r.error){const m=String(r.error.message||r.error);
-    loginMsg=m==='Invalid login credentials'?'E-mail ou mot de passe incorrect.'
+    loginMsg=m==='Invalid login credentials'?'E-mail ou mot de passe incorrect. Si on t’a créé un compte, recopie le mot de passe provisoire exactement (majuscules et minuscules comptent) ou demande-en un nouveau.'
       :/fetch|network|load failed/i.test(m)?'Impossible de joindre Supabase. Ouvre le fichier dans ton navigateur (Chrome, Edge…) et non dans l’aperçu de Claude, puis vérifie qu’un bloqueur de pub ou le réseau de ton entreprise ne bloque pas supabase.co.'
       :/already registered/i.test(m)?'Un compte existe déjà avec cet e-mail : utilise « Se connecter ».'
       :m;
@@ -2020,6 +2022,28 @@ async function teamCall(payload){
   if(error){let m='Action impossible pour le moment.';try{const j=await error.context.json();if(j&&j.error)m=j.error;}catch(e){}throw new Error(m);}
   if(data&&data.error)throw new Error(data.error);return data;
 }
+function forcePwChange(){
+  if(document.getElementById('pw-force'))return;
+  const d=document.createElement('div');d.id='pw-force';d.className='pw-force';
+  d.innerHTML=`<form class="pw-card" novalidate><h2>Bienvenue sur Kairn${myName?', '+esc(myName):''} 👋</h2><p>Pour ta première connexion, choisis ton propre mot de passe. Le mot de passe provisoire ne marchera plus ensuite.</p>
+    <label class="field"><span>Nouveau mot de passe (8 caractères minimum)</span><input id="pw-n1" type="password" autocomplete="new-password" minlength="8" required></label>
+    <label class="field"><span>Confirme-le</span><input id="pw-n2" type="password" autocomplete="new-password" minlength="8" required></label>
+    <p class="hint" id="pw-msg" style="color:var(--danger)"></p>
+    <div class="acts" style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn" id="pw-out">Se déconnecter</button><button type="submit" class="btn primary">Enregistrer mon mot de passe</button></div></form>`;
+  document.body.appendChild(d);setTimeout(()=>d.querySelector('#pw-n1').focus(),50);
+  d.querySelector('#pw-out').onclick=()=>sb.auth.signOut();
+  d.querySelector('form').onsubmit=async ev=>{ev.preventDefault();const a=d.querySelector('#pw-n1').value,b=d.querySelector('#pw-n2').value,msg=d.querySelector('#pw-msg'),btn=d.querySelector('[type=submit]');
+    if(a.length<8){msg.textContent='8 caractères minimum.';return;}if(a!==b){msg.textContent='Les deux mots de passe ne sont pas identiques.';return;}
+    btn.disabled=true;msg.textContent='';
+    const {error}=await sb.auth.updateUser({password:a,data:{must_change_password:false}});
+    if(error){btn.disabled=false;msg.textContent=/different|same/i.test(String(error.message))?'Choisis un mot de passe différent du provisoire.':/weak|short|least/i.test(String(error.message))?'Mot de passe trop simple, choisis-en un plus long.':'Enregistrement impossible, réessaie.';return;}
+    mustChangePw=false;d.remove();toast('Mot de passe enregistré. Bienvenue !');};
+}
+function credsModal(email,pw,title){
+  const txt=`Kairn : https://lamoongit.github.io/kairn/\nE-mail : ${email}\nMot de passe provisoire : ${pw}\n(Tu choisiras ton propre mot de passe à la première connexion.)`;
+  openModal({title,size:'small',body:`<p>Identifiants à transmettre :</p><pre class="creds">${esc(txt)}</pre><p class="hint">Copie-les maintenant : le mot de passe ne sera plus affiché. À sa première connexion, la personne devra choisir son propre mot de passe.</p>`,foot:`<span class="spacer"></span><button class="btn" data-close>Fermer</button><button class="btn primary" id="cr-copy">Copier</button>`});
+  document.getElementById('cr-copy').onclick=async()=>{try{await navigator.clipboard.writeText(txt);toast('Identifiants copiés');}catch(e){toast('Copie refusée : sélectionne le texte à la main.');}};
+}
 function genPass(){const a='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';const r=new Uint32Array(12);crypto.getRandomValues(r);return Array.from(r,x=>a[x%a.length]).join('');}
 async function loadTeam(){const {data,error}=await sb.from('tk_members').select('member_id,email,display_name,perms,created_at').eq('owner_id',sbUser.id).order('created_at');if(error)throw error;teamRows=data||[];}
 async function teamModal(){
@@ -2046,17 +2070,17 @@ async function teamModal(){
       </div></div>`,foot:`<span class="spacer"></span><button class="btn" data-close>Fermer</button>`});
   const root=document.getElementById('modal-root');
   root.querySelector('#t-create').onclick=async ev=>{
-    const btn=ev.currentTarget,email=$('#t-email').value.trim(),password=$('#t-pass').value,name=$('#t-name').value.trim();
+    const btn=ev.currentTarget,email=$('#t-email').value.trim().toLowerCase(),password=$('#t-pass').value.trim(),name=$('#t-name').value.trim();
     if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){toast('E-mail invalide.');return;}
     if(password.length<8){toast('Mot de passe provisoire : 8 caractères minimum.');return;}
     btn.disabled=true;
-    try{await teamCall({action:'create',email,password,name,perms:readPerms(root.querySelector('#t-new'))});toast('Compte créé. Transmets l’e-mail et le mot de passe provisoire.');teamModal();}
+    try{await teamCall({action:'create',email,password,name,perms:readPerms(root.querySelector('#t-new'))});await teamModal();credsModal(email,password,'Compte créé');}
     catch(e){toast(e.message);btn.disabled=false;}
   };
   root.querySelectorAll('.team-card[data-mid]').forEach(card=>{
     const mid=card.dataset.mid,row=teamRows.find(r=>r.member_id===mid);
     card.querySelector('[data-team="save"]').onclick=async()=>{const {error}=await sb.from('tk_members').update({perms:readPerms(card)}).eq('owner_id',sbUser.id).eq('member_id',mid);toast(error?'Enregistrement impossible.':'Modules mis à jour.');};
-    card.querySelector('[data-team="pass"]').onclick=async()=>{const pw=genPass();try{await teamCall({action:'reset_password',member_id:mid,password:pw});openModal({title:'Nouveau mot de passe',size:'small',body:`<p>Nouveau mot de passe provisoire pour <b>${esc(row.email)}</b> :</p><p style="font:600 16px var(--font-mono);user-select:all">${esc(pw)}</p><p class="hint">Copie-le maintenant : il ne sera plus affiché.</p>`,foot:`<span class="spacer"></span><button class="btn primary" data-close>OK</button>`});}catch(e){toast(e.message);}};
+    card.querySelector('[data-team="pass"]').onclick=async()=>{const pw=genPass();try{await teamCall({action:'reset_password',member_id:mid,password:pw});credsModal(row.email,pw,'Nouveau mot de passe');}catch(e){toast(e.message);}};
     card.querySelector('[data-team="del"]').onclick=()=>confirmBox('Supprimer ce compte ?',`${row.email} perdra tout accès à Kairn. Ton espace n'est pas touché ; les tâches que vous vous étiez assignées restent chez leur créateur.`).then(async ok=>{if(!ok)return;try{await teamCall({action:'delete',member_id:mid});toast('Compte supprimé.');teamModal();}catch(e){toast(e.message);}});
   });
 }
