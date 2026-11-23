@@ -737,6 +737,21 @@ h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;letter-spaci
 .idea-det{width:100%;border:1px solid transparent;border-radius:6px;padding:4px 6px;margin-left:-6px;background:transparent;resize:vertical;font-size:14px;color:var(--muted);min-height:30px}
 .idea-foot{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 @media (max-width:820px){.idea-add{grid-template-columns:minmax(0,1fr) auto}.idea-add select{grid-column:1/-1;grid-row:2}}
+
+.ag-btns{display:flex;gap:8px;flex-wrap:wrap}
+.md-body{font-size:14.5px;line-height:1.55;color:var(--ink)}
+.md-body h3,.md-body h4,.md-body h5{margin:18px 0 6px;line-height:1.3}
+.md-body h3{font-size:18px}.md-body h4{font-size:16px}.md-body h5{font-size:14.5px}
+.md-body h3:first-child,.md-body h4:first-child{margin-top:0}
+.md-body p{margin:6px 0}
+.md-body ul,.md-body ol{margin:6px 0;padding-left:22px}
+.md-body li{margin:3px 0}
+.md-body a{color:var(--accent);word-break:break-word}
+.md-body code{font-family:var(--font-mono);font-size:12.5px;background:var(--surface-2);padding:1px 4px;border-radius:4px}
+.md-wrap{overflow-x:auto;margin:8px 0}
+.md-body table{border-collapse:collapse;width:100%;font-size:13.5px}
+.md-body th,.md-body td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+.md-body th{background:var(--surface-2)}
 </style>
 </head>
 <body>
@@ -955,7 +970,7 @@ const AGENTS=[{k:'Skout',c:'skout',l:'S',role:'Veille neige et stations pour le 
 let agReports=[],agMarking=false;
 function agSafeUrl(u){return typeof u==='string'&&/^https:\/\/claude\.ai\//.test(u)?u:'';}
 async function sbLoadAgents(){
-  const {data,error}=await sb.from('tk_agent_reports').select('id,agent,run_date,title,summary,items,alert,doc_url,is_read,created_at').order('run_date',{ascending:false}).order('created_at',{ascending:false}).limit(300);
+  const {data,error}=await sb.from('tk_agent_reports').select('id,agent,run_date,title,summary,items,alert,doc_url,is_read,created_at,body').order('run_date',{ascending:false}).order('created_at',{ascending:false}).limit(300);
   if(error)throw error;
   agReports=data||[];
 }
@@ -1002,6 +1017,38 @@ function viewIdeas(){
     </article>`;}).join(''):`<div class="dash-empty">${ideaItems().length?'Aucune idée dans ce filtre.':'Ta boîte à idées est vide. Note ici tout ce qui te passe par la tête : nouvelle OP, test A/B sur un mailing, amélioration d’une page station…'}</div>`}</div>`;
 }
 
+
+function mdInline(t){
+  let h=esc(t);
+  h=h.replace(/`([^`]+)`/g,'<code>$1</code>');
+  h=h.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
+  h=h.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,(m,a,u)=>`<a href="${u}" target="_blank" rel="noopener">${a}</a>`);
+  return h;
+}
+function mdToHtml(md){
+  const L=String(md||'').replace(/\r/g,'').split('\n');let out='',i=0;
+  const cells=l=>l.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+  while(i<L.length){
+    const l=L[i];
+    if(!l.trim()){i++;continue;}
+    const h=l.match(/^(#{1,6})\s+(.*)$/);
+    if(h){const lv=Math.min(5,Math.max(3,h[1].length+1));out+=`<h${lv}>${mdInline(h[2])}</h${lv}>`;i++;continue;}
+    if(/^\s*\|/.test(l)){const rows=[];while(i<L.length&&/^\s*\|/.test(L[i])){rows.push(L[i]);i++;}
+      const body=rows.filter(r=>!/^\s*\|?\s*:?-{2,}/.test(r));const head=body.shift();
+      out+=`<div class="md-wrap"><table><thead><tr>${cells(head||'').map(c=>`<th>${mdInline(c)}</th>`).join('')}</tr></thead><tbody>${body.map(r=>`<tr>${cells(r).map(c=>`<td>${mdInline(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;continue;}
+    if(/^\s*[-*]\s+/.test(l)){let it='';while(i<L.length&&/^\s*[-*]\s+/.test(L[i])){it+=`<li>${mdInline(L[i].replace(/^\s*[-*]\s+/,''))}</li>`;i++;}out+=`<ul>${it}</ul>`;continue;}
+    if(/^\s*\d+[.)]\s+/.test(l)){let it='';while(i<L.length&&/^\s*\d+[.)]\s+/.test(L[i])){it+=`<li>${mdInline(L[i].replace(/^\s*\d+[.)]\s+/,''))}</li>`;i++;}out+=`<ol>${it}</ol>`;continue;}
+    let para=[];while(i<L.length&&L[i].trim()&&!/^(#{1,6}\s|\s*\||\s*[-*]\s+|\s*\d+[.)]\s+)/.test(L[i])){para.push(mdInline(L[i]));i++;}
+    out+=`<p>${para.join('<br>')}</p>`;
+  }
+  return out;
+}
+function agOpenReport(id){
+  const r=agReports.find(x=>x.id===id);if(!r)return;
+  const body=r.body?`<div class="md-body">${mdToHtml(r.body)}</div>`:`<div class="md-body"><p><b>En bref :</b> ${esc(r.summary)}</p>${agItems(r).length?`<ul>${agItems(r).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}<p class="ag-role">Le rapport complet de ce jour n’est pas encore enregistré dans Kairn : ouvre-le dans le document.</p></div>`;
+  openModal({title:esc(r.agent+' · '+r.title),body,foot:`${agLink(r,'Ouvrir dans le document','btn')}<span class="spacer"></span><button class="btn primary" data-close>Fermer</button>`,size:'wide'});
+}
+function agRead(r,label,cls){return `<button class="${cls||'btn sm primary'}" data-act="open-report" data-id="${esc(r.id)}">${label||'Lire le rapport'}</button>`;}
 function viewAgents(){
   const cards=AGENTS.map(a=>{
     const r=agLatest(a.k);
@@ -1012,9 +1059,9 @@ function viewAgents(){
       <p class="ag-sum">${esc(r.summary)}</p>
       ${r.alert?`<p class="ag-alert"><b>Alerte :</b> ${esc(r.alert)}</p>`:''}
       ${it.length?`<ul class="ag-items">${it.slice(0,5).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}
-      <div class="ag-foot">${agLink(r)}<span class="ag-role">${esc(r.title)}</span></div></article>`;
+      <div class="ag-foot"><div class="ag-btns">${agRead(r)}${agLink(r,'Document','btn sm')}</div></div></article>`;
   }).join('');
-  const rows=agReports.map(r=>{const a=AGENTS.find(x=>x.k===r.agent)||AGENTS[0];return `<tr><td class="d">${esc(dShort(r.run_date))}</td><td>${a.k}</td><td>${esc(r.summary)}</td><td>${agLink(r,'Ouvrir','link')}</td></tr>`;}).join('');
+  const rows=agReports.map(r=>{const a=AGENTS.find(x=>x.k===r.agent)||AGENTS[0];return `<tr><td class="d">${esc(dShort(r.run_date))}</td><td>${a.k}</td><td>${esc(r.summary)}</td><td>${agRead(r,'Lire','link')}</td></tr>`;}).join('');
   if(agUnread())setTimeout(agMarkRead,1500);
   return `<div class="ag-grid">${cards}</div>
     <div class="section-h"><h2>Historique des récaps</h2></div>
@@ -1025,7 +1072,7 @@ function agentsDashHTML(){
   const latest=AGENTS.map(a=>({a,r:agLatest(a.k)})).filter(x=>x.r&&x.r.run_date>=lim);
   const head=`<div class="section-h"><h2>Récaps des agents</h2><span class="r"><a class="btn sm" href="#agents">Tous les récaps</a></span></div>`;
   if(!latest.length)return '';
-  return head+`<section class="panel ag-mini" style="margin-bottom:18px">${latest.map(({a,r})=>`<div class="ag-line">${agAv(a)}<span class="s"><b>${a.k}</b> · ${esc(agRel(r.run_date))}${!r.is_read?'<span class="ag-new">Nouveau</span>':''} — ${esc(r.alert?('Alerte : '+r.alert):r.summary)}</span>${agLink(r,'Lire','link')}</div>`).join('')}</section>`;
+  return head+`<section class="panel ag-mini" style="margin-bottom:18px">${latest.map(({a,r})=>`<div class="ag-line">${agAv(a)}<span class="s"><b>${a.k}</b> · ${esc(agRel(r.run_date))}${!r.is_read?'<span class="ag-new">Nouveau</span>':''} — ${esc(r.alert?('Alerte : '+r.alert):r.summary)}</span>${agRead(r,'Lire','link')}</div>`).join('')}</section>`;
 }
 async function initSupa(){
   if(!window.supabase||!window.supabase.createClient){mode='login';ready=true;loginMsg='Impossible de charger Supabase : vérifie ta connexion internet puis recharge la page.';schedule();return;}
@@ -2302,6 +2349,7 @@ document.addEventListener('click',e=>{
   switch(a.dataset.act){
     case 'toggle-done':e.stopPropagation();toggleDone(id);if(inModal){hideModal();}if(drawer&&!droot.hidden&&!droot.contains(a)&&drawer.t.id===id)openTask(id);break;
     case 'open-task':if(inModal)hideModal();openTask(id);break;
+    case 'open-report':agOpenReport(id);break;
     case 'new-task':if(inModal)hideModal();openTask(null,{due:a.dataset.due,status:a.dataset.status,projectId:a.dataset.project,eventId:a.dataset.event});break;
     case 'open-event':if(inModal)hideModal();if(drawer)closeDrawer();eventModal(id);break;
     case 'new-event':if(inModal)hideModal();if(drawer)closeDrawer();eventModal(null,{start:a.dataset.start,type:a.dataset.type,projectId:a.dataset.project});break;
